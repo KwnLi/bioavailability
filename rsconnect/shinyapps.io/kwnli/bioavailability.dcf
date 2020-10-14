@@ -1,0 +1,12 @@
+name: bioavailability
+title: bioavailability
+username:
+account: kwnli
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2999669
+bundleId: 3737374
+url: https://kwnli.shinyapps.io/bioavailability/
+when: 1602643675.94897
+asMultiple: FALSE
+asStatic: FALSE
