@@ -2,19 +2,19 @@ library(ggplot2)
 library(truncnorm) 
 library(dplyr)
 
-#####Simulate Pb error function#####
+#####Simulate error function#####
 simError <- function(
   # Are you modeling Pb or As?
   AsPb = "Pb",        # "As" or "Pb"
   
-  # What is the site-specific soil Pb action level?
+  # What is the site-specific soil contaminant action level?
   actLvl = 400,       # mg/kg  (action level: limit of biovalability above which site has to be remedied)
   
-  # Enter the total soil [Pb] (in ppm) for each of the X samples:
-  tot = c(800,1000,790,709,1120),
+  # Use mean of upper 95% interval in estimation of total contaminant?
+  useMeanTot = T,       # T = use the mean; F = use 95% interval
   
-  # Enter the % IVBA results for the Y samples
-  IVBA_meas = c(61,65,70),
+  # Use mean or upper 95% interval in estimation of IVBA?
+  useMeanIVBA = T,      # T = use the mean; F = use 95% interval
   
   # Were the samples composited?
   compositeTF = F,
@@ -22,49 +22,63 @@ simError <- function(
   # If yes, how many increments were combined per composite?
   Xaggr = 1,         # composite cells to aggregate
   
-  # Use mean of upper 95% interval in estimation of total Pb?
-  useMean = T,       # T = use the mean of inputs; F = use 95% interval of inputs
-  
-  # Should the heterogeneity of the input samples be used in simulation, or default values?
-  heterogeneity = "default",  # "default" = use default heterogeneity
-                              # "sample" = use the sample hetergeneity
+  # What heterogeneity should be used in the simulation?
+  heterogeneity = "user",   # "user" = user-supplied heterogeneity
+                            # "default" = use default heterogeneity values
+                            # "sample" = use the sample hetergeneity
   
   # Should heterogeneity simulation be based on mean or 95% upper level?
   useHetMnTF = TRUE,        # TRUE = use mean heterogeneity; FALSE = use upper 95%
   
-  #Simulation parameters
+  # Input mode: measurements or % above/below action level?
+  frcMode = TRUE,    # TRUE = input is fraction above/below action level
+  
+  ##### INPUTS FOR frcMode = TRUE
+  # fraction above/below
+  tot_n = NULL,  # how many total metal concentration samples?
+  IVBA_n = NULL, # how many samples analyzed for IVBA?
+  
+  frcAct = NULL,    # fraction of the action level threshold
+  
+  CoeV_tot = NULL,     # assume coefficient of variation for total metal conc.
+  
+  RBAmean = 60,     # assume RBA value
+  CoeV_RBA = NULL,    # assume coefficient of variation for RBA
+  
+  ##### INPUTS FOR USER-SUPPLIED MEASUREMENTS (frcMode = FALSE)
+  # Enter the total soil metal (in ppm) for each of the X samples:
+  tot = NULL,
+  
+  # Enter the % IVBA results for the Y samples
+  IVBA_meas = NULL,
+  
+  ###### SIMULATION PARAMETERS
   iter = 1000,       # nr. simulations
   ncel = 1000,       # nr. cells in the decision unit
   sampmax = 50       # maximum number of samples to simulate
-){
-  # define simulation parameters 
-  Ysamp <- c(length(tot):sampmax)   # range of possible number of samples to simulate
   
+){
+  
+  # define inverse model to calculate observed IVBA from true RBA 
+  fy <- function(y, m, b) {
+    x = (y - rnorm(1,0,sepred) - b)/m
+    return(max(0,x))}
+  
+  # define direct model, from mean measured IVBA to estimated RBA
+  fx <- function(x, m, b) { 
+    y = m*x+b
+    return(y)}
+  
+  # m and b depend on the contaminant:
   if(AsPb == "As"){
     sepred = 19/1.96 # from 95% prediction limit for a single As RBA measurement 
-    
-    # define inverse model to calculate observed IVBA from true RBA 
-    fy <- function(y) { # from https://doi.org/10.1080/15287394.2015.1134038
-      x = (y - rnorm(1,0,sepred) - 3)/.79
-      return(max(0,x))}
-    
-    # define direct model, from mean measured IVBA to estimated RBA
-    fx <- function(x) { 
-      y = .79*x+3
-      return(y)}
+    m = 0.79         # from https://doi.org/10.1080/15287394.2015.1134038
+    b = 3
   }else if(AsPb == "Pb"){
     sepred = 32/1.96 # from 95% prediction limit for a single Pb RBA measurement 
-    
-    # define inverse model to calculate observed IVBA from true RBA 
-    fy <- function(y) { # from OSWER 9285.7-77 (May 2007)
-      x = (y - rnorm(1,0,sepred) - -2.81)/0.8782
-      return(max(0,x))}
-    
-    # define direct model, from mean measured IVBA to estimated RBA
-    fx <- function(x) { y = 0.8782*x + -2.81
-    return(y)}
+    m = 0.878       # from OSWER 9285.7-77 (May 2007)
+    b = -2.81
   }
-
   
   # Warnings about parameter combinations
   simWarnings <- c()
@@ -77,22 +91,40 @@ simError <- function(
     simWarnings <- append(simWarnings, "Warning: Composites of 1 sample are treated as discrete")
   }
   
-  # % bioavailable Pb (RBA) based on model and mean of IVBA inputs
-  tru_mu_rba <- fx(mean(IVBA_meas)) 
-  
-  # mean total Pb (mg/kg)
-  tru_mu_tot  <- mean(tot) 
-  
-  # fraction increase in mean bioavailable Pb (mg/kg) above the action level
-  if(useMean){   # if user wants to use the mean value
-    frc_incr_abo_thr <- (tru_mu_rba/100*tru_mu_tot - actLvl)/actLvl
-  }else{         # if user wants to use the 95% inverval value of total Pb
-    frc_incr_abo_thr <- (tru_mu_rba/100*quantile(tot,.95) - actLvl)/actLvl
+  if(frcMode){
+    tru_mu_rba <- RBAmean
+    tru_mu_tot <- ((frcAct*actLvl) + actLvl)/(tru_mu_rba/100)
+    
+    # Add a warning if IVBA_meas or tot values supplied
+    if(length(IVBA_meas)>0 | length(tot)>0){
+      simWarnings <- append(simWarnings, "Warning: Ignoring measurement inputs because you indicated no site-specific data.")
+    }
+  }else{
+    # % bioavailable metal (RBA) based on model and mean of IVBA inputs
+    tru_mu_rba <- fx(mean(IVBA_meas), m=m, b=b) 
+    
+    # mean total metal (mg/kg)
+    tru_mu_tot  <- mean(tot)
+    
+    # numbers of samples (for simulations)
+    tot_n = length(tot)         # number of total samples
+    IVBA_n = length(IVBA_meas)  # number of IVBA measurements
+    
+    # fraction increase in mean bioavailable metal (mg/kg) above the action level
+    if(useMeanTot){   # if user wants to use the mean value
+      frcAct <- (tru_mu_rba/100*tru_mu_tot - actLvl)/actLvl
+    }else{         # if user wants to use the 95% inverval value of total contaminant
+      frcAct <- (tru_mu_rba/100*quantile(tot,.95) - actLvl)/actLvl
+    }
   }
+  if(IVBA_n > tot_n) stop("more IVBA samples than total samples")
   
-  # relative sdv of RBA and Pb (based on what measurements?)
+  # relative sdv of RBA and total metal (based on what measurements?)
   cv <- function(x){sd(x)/mean(x)} # function to calculate coefficient of variance
-  if(heterogeneity=="default"){  # if using default mean heterogeneity
+  if(heterogeneity == "user"){
+    CoeV_RBA <- CoeV_RBA
+    CoeV_tot <- CoeV_tot
+  }else if(heterogeneity == "default"){  # if using default mean heterogeneity
     if(AsPb == "Pb"){
       CoeV_RBA <- ifelse(useHetMnTF, 0.55, 0.95) # use mean value, else use 95% level
       CoeV_tot <- ifelse(useHetMnTF, 1.12, 1.52)
@@ -100,29 +132,38 @@ simError <- function(
       CoeV_RBA <- ifelse(useHetMnTF, 1.118799762, 0.452062439)
       CoeV_tot <- ifelse(useHetMnTF, 0.452062439, 1.118799762)
     }
-  }else if(heterogeneity=="sample"){  # if calculating from input data
-    CoeV_RBA <- IVBA_meas %>% fx() %>% cv()
+  }else if(heterogeneity == "sample"){  # if calculating from input data
+    CoeV_RBA <- IVBA_meas %>% fx(m=m, b=b) %>% cv()
     CoeV_tot <- tot %>% cv()
   }
+  
+  # vector of possible sample numbers, starting from user-supplied value
+  Ysamp <- c(tot_n:sampmax)   # range of possible number of samples to simulate
   
   # initialize output matrices 
   mx_errYN <- array(rep(NA, length(Ysamp)*iter), dim=c(length(Ysamp),iter),
                     dimnames = list(Ysamp,
                                     paste("i=",1:iter,sep=""))) # matrix of hit(Yes error)/misses(No error)
   
-  prd_bPb <- mx_errYN # predicted bioavailable Pb (mg/kg) for the decision unit
+  prd_ba <- mx_errYN # predicted bioavailable metal (mg/kg) for the decision unit
   
   # generate plausible data
-  tru_rba <- rtruncnorm(n=ncel, a=0, b=Inf, mean=tru_mu_rba,
+  tru_rba <- rnorm(n=ncel, mean=tru_mu_rba,
                         sd=tru_mu_rba*CoeV_RBA) 
-  tru_tot <- rtruncnorm(n=ncel, a=0, b=Inf, mean=tru_mu_tot,
+  tru_tot <- rnorm(n=ncel, mean=tru_mu_tot,
                        sd=tru_mu_tot*CoeV_tot)
   cells <- cbind(tru_tot,tru_rba)
   
-  # I) Create realistic true Pb and RBA 
-  #    [i.e. populate synthetic decision unit]
+  # empty dataframes for data checking
+  samp.DUsample = NULL
+  samp.meas_tot = NULL
+  samp.meas_ivb = NULL
+  samp.prd_ba = NULL
   
-  # estimate bioavailable Pb and remediation error
+  # I) Create realistic true total metal and RBA 
+  #    [i.e. populate synthetic decision unit]
+
+  # estimate bioavailable metal and remediation error
   for (j in 1:length(Ysamp)){ # varying amount of samples 
     print(paste("Simulating samples=",Ysamp[j]))
     
@@ -143,36 +184,59 @@ simError <- function(
         measurement_input = cells[sample(1:ncel,Ysamp[j]),]
       }
       
-      # III) (lab) measure Pb for each input, 
+      # III) (lab) measure total metal for each input, 
       #      1 time per cell
-      meas_Pb <- rtruncnorm(n=Ysamp[j], a=0, b=Inf,
+      meas_tot <- rtruncnorm(n=Ysamp[j], a=0, b=Inf,
                             mean=measurement_input[,"tru_tot"],
-                            measurement_input[,"tru_tot"]*10/100)
+                            measurement_input[,"tru_tot"]*5/100)
       
       # measure IVBA for [IVBAsamp] measurement_input (i.e. run inverse model), 
       # 1 time per cell
-      IVBAsamp <- length(IVBA_meas) + j - 1  # increase IVBA by 1 each sample increase
-      meas_ivb <- sapply(measurement_input[1:IVBAsamp,"tru_rba"],fy)  # convert RBA to IVBA
+      IVBAsamp <- IVBA_n + j - 1  # increase IVBA by 1 each sample increase
+      meas_ivb <- sapply(measurement_input[1:IVBAsamp,"tru_rba"], fy, m=m, b=b)  # convert RBA to IVBA
+      
+      # upper 95% conf. int. of the mean function:
+      upper95 <- function(x,lvl){
+        xbar = mean(x)
+        up95 = xbar + qnorm(lvl)*(sd(x)/sqrt(length(x)))
+        return(up95)
+      }
       
       # IV, V) avg IVBA measurements, calculate DU RBA
-      est_rba_DU <- meas_ivb %>% mean() %>% fx
+      if(useMeanIVBA){   # if user wants to use the mean value
+        est_rba_DU <- meas_ivb %>% mean() %>% fx(m=m, b=b)
+      }else{         # if user wants to use the 95% inverval value of IVBA measurements
+        est_rba_DU <- meas_ivb %>% upper95(lvl=.975) %>% fx(m=m, b=b)
+      }
       
-      # VI) calc bioaval Pb for DU 
-      if(useMean){   # if user wants to use the mean value
-        baPb_DU <- mean(meas_Pb)*est_rba_DU/100
-      }else{         # if user wants to use the 95% inverval value of total Pb
-        baPb_DU <- quantile(meas_Pb,.95)*est_rba_DU/100
+      # VI) calc bioaval total contaminant mass fraction (mg/kg) for DU 
+      if(useMeanTot){   # if user wants to use the mean value
+        ba_DU <- mean(meas_tot)*est_rba_DU/100
+      }else{         # if user wants to use the 95% inverval value of total
+        ba_DU <- upper95(meas_tot, lvl=.975)*est_rba_DU/100
       }
       
       # exceeding threshold in this simulation, Y/N?
-      if (frc_incr_abo_thr>0){
-        mx_errYN[j,k] <- as.numeric(baPb_DU<actLvl) # for t1 error
+      if (frcAct>0){
+        mx_errYN[j,k] <- as.numeric(ba_DU<actLvl) # for t1 error
       }else{
-        mx_errYN[j,k] <- as.numeric(baPb_DU>actLvl) # for t2 error
+        mx_errYN[j,k] <- as.numeric(ba_DU>actLvl) # for t2 error
       }
       
-      # store bioaval Pb for DU for this simulation
-      prd_bPb[j,k] <- baPb_DU
+      # store bioavailable metal for DU for this simulation
+      prd_ba[j,k] <- ba_DU
+      
+      # output for error checking:
+      if(j==1 | j == length(Ysamp)){
+        samp.DUsample = 
+          bind_rows(samp.DUsample, 
+                    data.frame(iteration = k, samples = Ysamp[j], measurement_input) %>% 
+                      mutate(tru_rba = replace(tru_rba, -(1:IVBAsamp), NA)) # replace all not sampled with NA
+                    )
+        samp.meas_tot = bind_rows(samp.meas_tot, data.frame(iteration = k, samples = Ysamp[j], meas_tot))
+        samp.meas_ivb = bind_rows(samp.meas_ivb, data.frame(iteration = k, samples = Ysamp[j], meas_ivb))
+        samp.prd_ba = bind_rows(samp.prd_ba, data.frame(iteration = k, samples = Ysamp[j], ba_DU))
+      }
       
     } # loop over sim
   } # ... over nr samples
@@ -181,22 +245,29 @@ simError <- function(
                        probability =apply(mx_errYN, 1, mean)*100 # transform Y/N into prob of type I or II errors
   )
   
-  return(list(frc_incr_abo_thr = frc_incr_abo_thr, 
+  return(list(frcAct = frcAct, 
               tru_mu_tot = tru_mu_tot, 
               tru_mu_rba = tru_mu_rba, 
+              errortype = ifelse(frcAct>0, "type 1", "type 2"),
               err_pb = err_pb,
+              tot_n = tot_n,
+              IVBA_n = IVBA_n,
               sim_attributes = list(AsPb = AsPb,
-                                    actLvl = actLvl, 
+                                    actLvl = actLvl,
                                     compositeTF = compositeTF,
                                     Xaggr = Xaggr, 
-                                    useMean = useMean, 
+                                    useMeanTot = useMeanTot, 
+                                    useMeanIVBA = useMeanIVBA,
                                     heterogeneity = heterogeneity,
-                                    useHetMnTF = useHetMnTF,
                                     Hetvals = c(CoeV_tot = CoeV_tot, CoeV_RBA = CoeV_RBA),
                                     iter = iter, 
                                     ncel = ncel, 
                                     sampmax = sampmax,
-                                    simWarnings = simWarnings)))
+                                    simWarnings = simWarnings,
+                                    samp.DUsample = samp.DUsample,
+                                    samp.meas_tot = samp.meas_tot, 
+                                    samp.meas_ivb = samp.meas_ivb,
+                                    samp.prd_ba = samp.prd_ba)))
 }
 
 
@@ -205,27 +276,22 @@ simText <- function(simResult){
   
   # Extract simulation variables
   AsPb = simResult$sim_attributes$AsPb
-  frc_incr_abo_thr = simResult$frc_incr_abo_thr
+  frcAct = simResult$frcAct
   tru_mu_rba = simResult$tru_mu_rba
   tru_mu_tot = simResult$tru_mu_tot
-  useMean = simResult$sim_attributes$useMean
+  useMeanTot = simResult$sim_attributes$useMeanTot
   actLvl = simResult$sim_attributes$actLvl
   err_pb = simResult$err_pb
-  
-  # Determine error type
-  errortype <- ifelse(frc_incr_abo_thr>0, "type 2", "type 1")
+  errortype = simResult$errortype
   
   # Output text
   return(
-    paste("Estimated mean bioavailable <b>", AsPb, " = ", round(tru_mu_rba/100*tru_mu_tot, 1),
-          "mg/kg</b>. ", ifelse(useMean, "This value", "The 95% interval of this value"),
-          " is <b>", round(abs(frc_incr_abo_thr*100), 1), "% ",
-          ifelse(frc_incr_abo_thr>0, "above", "below"), " the action level</b> (",
-          actLvl, "mg/kg). Based on the sample info provided, the probability that the conclusion <i>'soil ", AsPb, " ",
-          ifelse(errortype == "type 1", "does not exceed ", "exceeds "), "the action level'</i> <b>is wrong (i.e. a ",
-          errortype, " error has been made) is ", round(err_pb[1,"probability"], 1), 
-          "% </b>. EPA has set guidance that the probability of incorrectly concluding that bioavailability of soil ", AsPb, " ",
-          ifelse(errortype == "type 1", "exceeds ", "does not exceed "), "the action level should be",
+    paste("If the DU is <b>", round(abs(frcAct*100), 1), "% ",
+          ifelse(frcAct>0, "above", "below"), "</b> the specified action level (i.e., the DU <i>is",
+          ifelse(frcAct>0, "", " not"), "</i> contaminated), the probability of making a ",
+          errortype, " error is <b>", round(err_pb[1,"probability"], 1), 
+          "%</b>. EPA has set guidance that the probability of incorrectly concluding that bioavailability of soil ", AsPb, " ",
+          ifelse(errortype == "type 1", "does not exceed ", "exceeds "), "the action level should be",
           ifelse(errortype == "type 1", " less than 5%", " less than 20%"), ".",
           sep = "")
   )
@@ -238,20 +304,19 @@ simText <- function(simResult){
 simPlot <- function(simResult){
   
   # Extract simulation variables
-  frc_incr_abo_thr = simResult$frc_incr_abo_thr
+  frcAct = simResult$frcAct
   err_pb = simResult$err_pb
   AsPb = simResult$sim_attributes$AsPb
-  
-  # Determine error type
-  errortype <- ifelse(frc_incr_abo_thr>0, "type 2", "type 1")
+  errortype = simResult$errortype
   
   ggplot(err_pb, aes(x = samples, y = probability)) + geom_line() + 
     xlab("Number of samples") + 
     ylab(paste("Probability of", errortype, "error", sep = " ")) +
     geom_hline(yintercept = ifelse(errortype == "type 1", 5, 20), color = "red") + 
-    ggtitle(paste("Probability of ",errortype, " error when estimated bioavailable ", AsPb, " is ",
-                  round(abs(frc_incr_abo_thr*100),1), "% ", 
-                  ifelse(frc_incr_abo_thr>0, "above", "below"), " the action level", sep = ""))
+    ggtitle(paste("Change in probability of ",errortype, " error when true bioavailable ", AsPb, " is ",
+                  round(abs(frcAct*100),1), "% ", 
+                  ifelse(frcAct>0, "above", "below"), " the action level, \nper increase in samples analyzed for total metal and IVBA values",
+                  sep = ""),)
 }
 
 
