@@ -286,13 +286,8 @@ simText <- function(simResult){
   
   # Output text
   return(
-    paste("If the DU is <b>", round(abs(frcAct*100), 1), "% ",
-          ifelse(frcAct>0, "above", "below"), "</b> the specified action level (i.e., the DU <i>is",
-          ifelse(frcAct>0, "", " not"), "</i> contaminated), the probability of making a ",
-          errortype, " error is <b>", round(err_pb[1,"probability"], 1), 
-          "%</b>. EPA has set guidance that the probability of incorrectly concluding that bioavailability of soil ", AsPb, " ",
-          ifelse(errortype == "type 1", "does not exceed ", "exceeds "), "the action level should be",
-          ifelse(errortype == "type 1", " less than 5%", " less than 20%"), ".",
+    paste("Based on the sampling protocol and decision unit assumptions entered, the probability of making a ",
+          errortype, " error is <b>", round(err_pb[1,"probability"], 1), "%</b>.",
           sep = "")
   )
 }
