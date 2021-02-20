@@ -5,9 +5,8 @@ account: kwnli
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2999669
-bundleId: 3877850
+bundleId: 4150350
 url: https://kwnli.shinyapps.io/bioavailability/
-when: 1605738698.70884
+when: 1611767439.94556
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|README.md
