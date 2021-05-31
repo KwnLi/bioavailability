@@ -1,12 +1,13 @@
 library(shiny)
 library(shinyjs)
-source("app_functions.R")
+source("app_functions_beta.R")
 
 #####App code#####
 ui <- fluidPage(
   useShinyjs(),
-  titlePanel("Simulate error in bioavailability estimation v0.72"),
-  helpText("Updated Jan. 13, 2021"),
+  tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
+  titlePanel("Simulate error in bioavailability estimation BETA v0.76.6"),
+  helpText("Updated May 28, 2021"),
 
   sidebarPanel(
     tabsetPanel(
@@ -17,47 +18,71 @@ ui <- fluidPage(
         numericInput("actLvl", 
                      "Enter site-specific action level (mg/kg):", 
                      400, step = 10),
+        hr(),
         h4("Sampling Protocol"),
         radioButtons("compositeTF", "Sample aggregation", choices = c(Discrete = FALSE, Composite = TRUE)),
-        em(conditionalPanel(
+        conditionalPanel(
           condition = "input.compositeTF == 'TRUE'",
-          numericInput("Xaggr", "*How many increments per composite?", 1, min = 2))),
+          numericInput("Xaggr", label = div(style = "font-weight: normal; font-style: italic", "*Increments per composite:"), 1, min = 2)),
         numericInput("tot_n", "# of samples to be analyzed for total Pb concentration", 5),
         numericInput("IVBA_n", "# of samples to be analyzed for IVBA", 3),
         radioButtons("useMeanTot", "For total metal concentration, use the:", 
                      choices = c(`Mean value` = T, `Upper 95% CI of mean` = F)),
         radioButtons("useMeanIVBA", "For IVBA, use the:", 
                      choices = c(`Mean value` = T, `Upper 95% CI of mean` = F)),
+        hr(),
         h4("Decision Unit Assumptions"),
-        HTML("Assume the true bioavailable metal concentration is +/- <b>X%</b> above or below the action level"),
-        radioButtons("frcAct", "X = ", choices = c(`25%` = 0.25, `50%` = 0.5, "Custom"), inline=TRUE),
+        HTML(paste("<b>Note:</b> Two sets of simulations will be run:",
+                 "<br/>",
+                 "<b>1.)</b> Simulations assuming true bioavailable metal concentration is above the action level (Type 1 error is possible)",
+                 "<br/>",
+                 "<b>2.)</b> Simulations assuming true bioavailable metal concentration is below the action level (Type 2 error is possible)")),
+        br(),
+        br(),
+        radioButtons("frcAct", "Select percent above/below the action level to simulate", choices = c(`25%` = 0.25, `50%` = 0.5, "Custom"), inline=TRUE),
         # conditional input if fraction above/below is custom
-        em(conditionalPanel(
+        conditionalPanel(
           condition = "input.frcAct == 'Custom'",
-          numericInput("frcAct_custom", "Custom value (%):", 30, step = 0.05, min = 0))),
-        helpText("Note: Two scenarios will be simulated. One scenario will simulate a DU with bioavailable metal concentration at X% above the specified action level (Type 1 error is possible) and a second scenario will simulate a DU with bioavailable metal concentration at X% below the action level (Type 2 error is possible)."),
-        radioButtons("CoeV_tot", "Assumed CoV for total metal concentration = ", 
+          numericInput("frcAct_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom value (%):"), 30, step = 1, min = 0, max = 99)),
+        selectInput("totdist", "Total metal concentration data distribution:", 
+                    choices = c(`log-normal` = "lognorm", normal = "normal")),
+        radioButtons("CoeV_tot", "Total metal concentration coefficient of variance (CoV):", 
                      choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
         # conditional input if metal CoV is custom
-        em(conditionalPanel(
+        conditionalPanel(
           condition = "input.CoeV_tot == 'Custom'",
-          numericInput("CoeV_tot_custom", "Custom metal CoV value:", 0.75, step = 0.05, min = 0))),
-        radioButtons("CoeV_RBA", "Assumed CoV for RBA = ", 
+          numericInput("CoeV_tot_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom metal CoV value:"), 0.75, step = 0.05, min = 0)),
+        selectInput("rbadist", "RBA data distribution:",
+                    choices = c(normal = "normal", uniform = "uniform", `log-normal` = "lognorm")),
+        radioButtons("CoeV_RBA", "RBA CoV:", 
                      choices = c(0.05, 0.15, 0.30, "Custom"), inline=TRUE),
         # conditional input if RBA CoV is custom
-        em(conditionalPanel(
+        conditionalPanel(
           condition = "input.CoeV_RBA == 'Custom'",
-          numericInput("CoeV_RBA_custom", "Custom RBA CoV value:", 0.10, step = 0.05, min = 0))),
-        radioButtons("RBAmean", "Assumed true mean soil RBA for the decision unit = ", 
+          numericInput("CoeV_RBA_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom RBA CoV value:"), 0.10, step = 0.05, min = 0)),
+        radioButtons("RBAmean", "RBA mean:", 
                      choices = c(`60%` = 60, "Custom"), inline=TRUE),
         # conditional input if assumed mean RBA is custom
-        em(conditionalPanel(
+        conditionalPanel(
           condition = "input.RBAmean == 'Custom'",
-          numericInput("RBAmean_custom", "Custom mean RBA value (%):", 50, step = 5, min = 0))),
+          numericInput("RBAmean_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom mean RBA value (%):"), 50, step = 5, min = 0)),
+        hr(),
         h4("Simulation Parameters"),
         numericInput("ncel", "Number of possible unique sampling locations in simulated decision unit", value = 1000, min = 100, step = 100),
         numericInput("iter", "Number of simulations", step = 1000, min = 100, value = 1000),
-        numericInput("sampmax", "Maximum number of samples to simulate", value = 50, min = 10),
+        radioButtons("simChoice", "Select simulation type", 
+                    choices = c(`Vary sample size` = "sample", `Vary contaminant level` = "contaminant")),
+        conditionalPanel(
+          condition = "input.simChoice == 'sample'",
+          numericInput("sampmax", label = div(style = "font-weight: normal; font-style: italic", "*Maximum number of samples to simulate:"), value = 50, min = 10)
+        ),
+        conditionalPanel(
+          condition = "input.simChoice == 'contaminant'",
+          HTML("<i>*Simulation range above/below action level:</i>"),
+          numericInput("minFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Minimum (%):"), value = 10, step = 10, min = 0),
+          numericInput("maxFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Maximum (%):"), value = 50, step = 10, min = 0),
+          numericInput("numbins", label = div(style = "font-weight: normal; font-style: italic", "Simulation intervals"), value = 10, min = 1)
+        ),
         br(),
         
         actionButton(inputId = "go", label = "Run simulation")
@@ -90,7 +115,8 @@ ui <- fluidPage(
                h3("Type 1 error"),
                htmlOutput("Type1preamble"),
                tags$head(tags$style("#Type1preamble{
-                                 font-size: 20px;
+                                 font-style: italic;
+                                 #font-size: 20px;
                                  }")),
                br(),
                htmlOutput("Type1text"),
@@ -101,7 +127,8 @@ ui <- fluidPage(
                h3("Type 2 error"),
                htmlOutput("Type2preamble"),
                tags$head(tags$style("#Type2preamble{
-                                 font-size: 20px;
+                                 font-style: italic;
+                                 #font-size: 20px;
                                  }")),
                br(),
                htmlOutput("Type2text"),
@@ -119,6 +146,13 @@ ui <- fluidPage(
                h4("Type 2 error simulation results"),
                plotOutput("Type2plot"),
                textOutput("Type2warn")
+               ),
+      tabPanel("Precision",
+               h4("Type 1 bioavailability estimate precision"),
+               plotOutput("Type1prec"),
+               br(),
+               h4("Type 2 bioavailability estimate precision"),
+               plotOutput("Type2prec")
                )
     )
   )
@@ -160,56 +194,131 @@ server <- function(input, output, session){
       updateNumericInput(session, "Xaggr", value = 1)
     }
   })
+  observe({
+    minFrcAct = input$minFrcAct
+    maxFrcAct = input$maxFrcAct
+    updateNumericInput(session, "minFrcAct", max = maxFrcAct)
+    updateNumericInput(session, "maxFrcAct", min = minFrcAct)
+  })
   simResult <- eventReactive(input$go,{
-    withProgress(
-      message = "Running simulations", value = 0,{
-        incProgress(1/3, detail = "Type 1 error")
-        type1 <- simError(
-          AsPb = input$AsPb,
-          actLvl = input$actLvl,
-          tot_n = as.numeric(input$tot_n),
-          IVBA_n = as.numeric(input$IVBA_n),
-          compositeTF = as.logical(input$compositeTF),
-          Xaggr = input$Xaggr,
-          useMeanTot = as.logical(input$useMeanIVBA),
-          useMeanIVBA = as.logical(input$useMeanTot),
-          frcAct = frcAct(),
-          CoeV_tot = CoeV_tot(),
-          CoeV_RBA = CoeV_RBA(),
-          RBAmean = RBAmean(),
-          iter = input$iter,
-          ncel = input$ncel,
-          sampmax = input$sampmax
-        )
-        
-        incProgress(1/3, detail = "Type 2 error")
-        
-        type2 <- simError(
-          AsPb = input$AsPb,
-          actLvl = input$actLvl,
-          tot_n = as.numeric(input$tot_n),
-          IVBA_n = as.numeric(input$IVBA_n),
-          compositeTF = as.logical(input$compositeTF),
-          Xaggr = input$Xaggr,
-          useMeanTot = as.logical(input$useMeanIVBA),
-          useMeanIVBA = as.logical(input$useMeanTot),
-          frcAct = -frcAct(),
-          CoeV_tot = CoeV_tot(),
-          CoeV_RBA = CoeV_RBA(),
-          RBAmean = RBAmean(),
-          iter = input$iter,
-          ncel = input$ncel,
-          sampmax = input$sampmax
-        )
-        list(type1, type2)
-      }
-    )
+    if(input$simChoice == "sample"){
+      withProgress(
+        message = "Running simulations", value = 0,{
+          incProgress(1/3, detail = "Type 1 error")
+          type1 <- simError(
+            simChoice = "sample",
+            AsPb = input$AsPb,
+            actLvl = input$actLvl,
+            tot_n = as.numeric(input$tot_n),
+            IVBA_n = as.numeric(input$IVBA_n),
+            compositeTF = as.logical(input$compositeTF),
+            Xaggr = input$Xaggr,
+            useMeanTot = as.logical(input$useMeanIVBA),
+            useMeanIVBA = as.logical(input$useMeanTot),
+            frcAct = frcAct(),
+            CoeV_tot = CoeV_tot(),
+            CoeV_RBA = CoeV_RBA(),
+            RBAmean = RBAmean(),
+            iter = input$iter,
+            ncel = input$ncel,
+            sampmax = input$sampmax,
+            dist_tot = input$totdist,
+            dist_RBA = input$rbadist
+          )
+          
+          incProgress(1/3, detail = "Type 2 error")
+          
+          type2 <- simError(
+            simChoice = "sample",
+            AsPb = input$AsPb,
+            actLvl = input$actLvl,
+            tot_n = as.numeric(input$tot_n),
+            IVBA_n = as.numeric(input$IVBA_n),
+            compositeTF = as.logical(input$compositeTF),
+            Xaggr = input$Xaggr,
+            useMeanTot = as.logical(input$useMeanIVBA),
+            useMeanIVBA = as.logical(input$useMeanTot),
+            frcAct = -frcAct(),
+            CoeV_tot = CoeV_tot(),
+            CoeV_RBA = CoeV_RBA(),
+            RBAmean = RBAmean(),
+            iter = input$iter,
+            ncel = input$ncel,
+            sampmax = input$sampmax,
+            dist_tot = input$totdist,
+            dist_RBA = input$rbadist
+          )
+          list(type1, type2)
+        }
+      )
+    }else if(input$simChoice == "contaminant"){
+      withProgress(
+        message = "Running simulations", value = 0,{
+          incProgress(1/3, detail = "Type 1 error")
+          type1 <- simError(
+            simChoice = "contaminant",
+            AsPb = input$AsPb,
+            actLvl = input$actLvl,
+            tot_n = as.numeric(input$tot_n),
+            IVBA_n = as.numeric(input$IVBA_n),
+            compositeTF = as.logical(input$compositeTF),
+            Xaggr = input$Xaggr,
+            useMeanTot = as.logical(input$useMeanIVBA),
+            useMeanIVBA = as.logical(input$useMeanTot),
+            frcAct = frcAct(),
+            minFrcAct = input$minFrcAct/100,
+            maxFrcAct = input$maxFrcAct/100,
+            CoeV_tot = CoeV_tot(),
+            CoeV_RBA = CoeV_RBA(),
+            RBAmean = RBAmean(),
+            iter = input$iter,
+            ncel = input$ncel,
+            numbins = input$numbins,
+            dist_tot = input$totdist,
+            dist_RBA = input$rbadist
+          )
+          
+          incProgress(1/3, detail = "Type 2 error")
+          
+          type2 <- simError(
+            simChoice = "contaminant",
+            AsPb = input$AsPb,
+            actLvl = input$actLvl,
+            tot_n = as.numeric(input$tot_n),
+            IVBA_n = as.numeric(input$IVBA_n),
+            compositeTF = as.logical(input$compositeTF),
+            Xaggr = input$Xaggr,
+            useMeanTot = as.logical(input$useMeanIVBA),
+            useMeanIVBA = as.logical(input$useMeanTot),
+            frcAct = -frcAct(),
+            minFrcAct = -input$minFrcAct/100,
+            maxFrcAct = -input$maxFrcAct/100,
+            CoeV_tot = CoeV_tot(),
+            CoeV_RBA = CoeV_RBA(),
+            RBAmean = RBAmean(),
+            iter = input$iter,
+            ncel = input$ncel,
+            numbins = input$numbins,
+            dist_tot = input$totdist,
+            dist_RBA = input$rbadist
+          )
+          list(type1, type2)
+        }
+      )
+    }
+    
   })
   
   onclick("go", runjs("window.scrollTo(0, 50)"))  # go back to top of window
   
   # outputs: display
-  output$Type1plot <- renderPlot({simPlot(simResult()[[1]])})
+  output$Type1plot <- renderPlot({
+    if(input$simChoice == "sample"){
+      simPlot(simResult()[[1]])
+    }else if(input$simChoice == "contaminant"){
+      simPlot2(simResult()[[1]])
+    }
+    })
   output$Type1preamble <- renderUI({HTML("Type 1 error is defined as incorrectly concluding the bioavailable metal fraction for the decision unit is below the action level when, in reality, it is above the action level. EPA has set guidance that the probability of making a type 1 error should be < 5%.")})
   output$Type1text <- renderUI({HTML(simText(simResult()[[1]]))})
   output$Type1warn <- renderText({
@@ -218,7 +327,13 @@ server <- function(input, output, session){
     )
     paste0(simResult()[[1]]$sim_attributes$simWarnings, collapse = " ")
     })
-  output$Type2plot <- renderPlot({simPlot(simResult()[[2]])})
+  output$Type2plot <- renderPlot({
+    if(input$simChoice == "sample"){
+      simPlot(simResult()[[2]])
+    }else if(input$simChoice == "contaminant"){
+      simPlot2(simResult()[[2]])
+    }
+  })
   output$Type2preamble <- renderUI({HTML("Type 2 error is defined as incorrectly concluding the bioavailable metal fraction for the decision unit is above the action level when, in reality, it is below the action level. EPA has set guidance that the probability of making a type 2 error should be < 20%.")})
   output$Type2text <- renderUI({HTML(simText(simResult()[[2]]))})
   output$Type2warn <- renderText({
@@ -227,7 +342,18 @@ server <- function(input, output, session){
     )
     paste0(simResult()[[2]]$sim_attributes$simWarnings, collapse = " ")
   })
-  output$finalText <- renderUI({HTML("Click on the <b>Sample Simulation</b> tab to see how increasing the number of samples analyzed for total Pb and IVBA improves Type 1 and 2 error probability.")})
+  output$finalText <- renderUI({
+    if(input$simChoice == "sample"){
+      HTML("Click on the <b>Sample Simulation</b> tab to see how increasing the number of samples analyzed for total concentration and IVBA improves Type 1 and 2 error probability.")
+    }else if(input$simChoice == "contaminant"){
+      HTML("Click on the <b>Sample Simulation</b> tab to see how Type 1 and 2 error probability changes with actual contamination level.")
+    }
+    })
+    
+  
+  # precision output
+  output$Type1prec <- renderPlot({precPlot(simResult()[[1]])})
+  output$Type2prec <- renderPlot({precPlot(simResult()[[2]])})
   
   # outputs: download data
   output$downDU.type1 <- downloadHandler(
