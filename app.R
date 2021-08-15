@@ -1,13 +1,13 @@
 library(shiny)
 library(shinyjs)
-source("app_functions_beta.R")
+source("app_functions_beta_nonparam.R")
 
 #####App code#####
 ui <- fluidPage(
   useShinyjs(),
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
-  titlePanel("Simulate error in bioavailability estimation BETA v0.76.6"),
-  helpText("Updated May 28, 2021"),
+  titlePanel("Simulate error in bioavailability estimation BETA v0.8 NON-PARAMETRIC"),
+  helpText("Updated July 15, 2021"),
 
   sidebarPanel(
     tabsetPanel(
