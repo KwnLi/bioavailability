@@ -1,0 +1,14 @@
+name: bioavailability_nonparam
+title: bioavailability_nonparam
+username:
+account: kwnli
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 4526651
+bundleId: 4969157
+url: https://kwnli.shinyapps.io/bioavailability_nonparam/
+when: 1630015284.63444
+lastSyncTime: 1630015284.63444
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app_functions_alpha.R|app_functions_beta.R
