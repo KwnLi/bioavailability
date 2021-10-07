@@ -1,14 +1,15 @@
 library(shiny)
 library(shinyjs)
-source("app_functions_beta_nonparam.R")
+source("app_functions_site.R")
 ucrtot <- read.csv("UCRtot.csv")
 ucrivba <- read.csv("UCRivba.csv")
+ucr_cov <- read.csv("UCR_CoV.csv")
 
 #####App code#####
 ui <- fluidPage(
   useShinyjs(),
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
-  titlePanel("Simulate error in bioavailability estimation BETA v1.0 NON-PARAMETRIC"),
+  titlePanel("Simulate error in bioavailability site-wide estimation BETA v1.0"),
   helpText("Updated August 26, 2021"),
 
   sidebarPanel(
@@ -69,7 +70,7 @@ ui <- fluidPage(
         #   condition = "input.RBAmean == 'Custom'",
         #   numericInput("RBAmean_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom mean RBA value (%):"), 50, step = 5, min = 0)),
         # hr(),
-        h4("Simulation Parameters"),
+        h4("Decision Unit Simulation Parameters"),
         numericInput("ncel", "Number of possible unique sampling locations in simulated decision unit", value = 1000, min = 100, step = 100),
         numericInput("iter", "Number of simulations", step = 1000, min = 100, value = 1000),
         numericInput("sampmax", label = "Maximum number of samples to simulate", value = 50, min = 10),
@@ -93,7 +94,6 @@ ui <- fluidPage(
       tabPanel(
         title = "Download",
         h4("Simulation values"),
-        downloadButton(outputId = "downDU", "DU samples"),
         downloadButton(outputId = "downtot", "Measured total soil fraction"),
         downloadButton(outputId = "downivb", "Measured IVBA"),
         downloadButton(outputId = "downprd_BA", "Predicted bioavailability"),
@@ -164,7 +164,9 @@ server <- function(input, output, session){
     updateNumericInput(session, "minFrcAct", max = maxFrcAct)
     updateNumericInput(session, "maxFrcAct", min = minFrcAct)
   })
-  sampleset <- eventReactive(input$go,{
+  DUparams <- eventReactive(input$go,{
+    # here is where you define the means and CoV to use
+    # need to define the options and make the buttons first?
     if(input$AsPb == "As"){
       tot.samples = ucrtot$totAs
       rba.samples = ucrivba$rbaAs
@@ -177,6 +179,7 @@ server <- function(input, output, session){
   simResult <- eventReactive(input$go,{
     withProgress(
       message = "Running simulations", value = 0,{
+        # replace with loop over DUs in the site
         incProgress(1/2)
         result <- simError_nonparam(
           AsPb = input$AsPb,
@@ -190,8 +193,10 @@ server <- function(input, output, session){
           iter = input$iter,
           ncel = input$ncel,
           sampmax = input$sampmax,
-          tot_data = sampleset()[[1]], 
-          rba_data = sampleset()[[2]]
+          tru_mu_tot = sampleset()[[1]], 
+          tru_mu_rba = sampleset()[[2]],
+          CoeV_tot = sampleset()[[2]],
+          CoeV_rba = sampleset()[[2]]
         )
         list(result)
       }
@@ -223,12 +228,6 @@ server <- function(input, output, session){
   output$resultPrec <- renderPlot({precPlot(simResult()[[1]])})
   
   # outputs: download data
-  output$downDU <- downloadHandler(
-    filename = function(){"DUsamples.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[1]]$sim_attributes$samp.DUsample, fname, row.names = FALSE)
-    }
-  )
   output$downtot <- downloadHandler(
     filename = function(){"measTot.csv"}, 
     content = function(fname){
