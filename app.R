@@ -6,8 +6,8 @@ source("app_functions_beta.R")
 ui <- fluidPage(
   useShinyjs(),
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
-  titlePanel("Simulate error in bioavailability estimation BETA v0.76.6"),
-  helpText("Updated May 28, 2021"),
+  titlePanel("Simulate error in bioavailability estimation SIMPLE VERSION"),
+  helpText("Updated Oct 7, 2021"),
 
   sidebarPanel(
     tabsetPanel(
@@ -95,15 +95,8 @@ ui <- fluidPage(
         downloadButton(outputId = "downivb.type1", "Measured IVBA"),
         downloadButton(outputId = "downprd_BA.type1", "Predicted bioavailability"),
         br(),
-        h4("Type 2 simulation values"),
-        downloadButton(outputId = "downDU.type2", "DU samples"),
-        downloadButton(outputId = "downtot.type2", "Measured total soil fraction"),
-        downloadButton(outputId = "downivb.type2", "Measured IVBA"),
-        downloadButton(outputId = "downprd_BA.type2", "Predicted bioavailability"),
-        br(),
         h4("Simulation R data"),
-        downloadButton(outputId = "downall.type1", "Type 1 sim rds"),
-        downloadButton(outputId = "downall.type2", "Type 2 sim rds")
+        downloadButton(outputId = "downall.type1", "Type 1 sim rds")
       )
     )
   ),
@@ -113,26 +106,9 @@ ui <- fluidPage(
       type = "tabs",
       tabPanel("Error Results",
                h3("Type 1 error"),
-               htmlOutput("Type1preamble"),
-               tags$head(tags$style("#Type1preamble{
-                                 font-style: italic;
-                                 #font-size: 20px;
-                                 }")),
                br(),
                htmlOutput("Type1text"),
                tags$head(tags$style("#Type1text{
-                                 font-size: 20px;
-                                 }")),
-               br(),
-               h3("Type 2 error"),
-               htmlOutput("Type2preamble"),
-               tags$head(tags$style("#Type2preamble{
-                                 font-style: italic;
-                                 #font-size: 20px;
-                                 }")),
-               br(),
-               htmlOutput("Type2text"),
-               tags$head(tags$style("#Type2text{
                                  font-size: 20px;
                                  }")),
                br(),
@@ -141,18 +117,11 @@ ui <- fluidPage(
       tabPanel("Sample simulation",
                h4("Type 1 error simulation results"),
                plotOutput("Type1plot"),
-               textOutput("Type1warn"),
-               br(),
-               h4("Type 2 error simulation results"),
-               plotOutput("Type2plot"),
-               textOutput("Type2warn")
+               textOutput("Type1warn")
                ),
       tabPanel("Precision",
                h4("Type 1 bioavailability estimate precision"),
-               plotOutput("Type1prec"),
-               br(),
-               h4("Type 2 bioavailability estimate precision"),
-               plotOutput("Type2prec")
+               plotOutput("Type1prec")
                )
     )
   )
@@ -204,7 +173,7 @@ server <- function(input, output, session){
     if(input$simChoice == "sample"){
       withProgress(
         message = "Running simulations", value = 0,{
-          incProgress(1/3, detail = "Type 1 error")
+          incProgress(1/2, detail = "Just running Type 1 error")
           type1 <- simError(
             simChoice = "sample",
             AsPb = input$AsPb,
@@ -225,36 +194,13 @@ server <- function(input, output, session){
             dist_tot = input$totdist,
             dist_RBA = input$rbadist
           )
-          
-          incProgress(1/3, detail = "Type 2 error")
-          
-          type2 <- simError(
-            simChoice = "sample",
-            AsPb = input$AsPb,
-            actLvl = input$actLvl,
-            tot_n = as.numeric(input$tot_n),
-            IVBA_n = as.numeric(input$IVBA_n),
-            compositeTF = as.logical(input$compositeTF),
-            Xaggr = input$Xaggr,
-            useMeanTot = as.logical(input$useMeanIVBA),
-            useMeanIVBA = as.logical(input$useMeanTot),
-            frcAct = -frcAct(),
-            CoeV_tot = CoeV_tot(),
-            CoeV_RBA = CoeV_RBA(),
-            RBAmean = RBAmean(),
-            iter = input$iter,
-            ncel = input$ncel,
-            sampmax = input$sampmax,
-            dist_tot = input$totdist,
-            dist_RBA = input$rbadist
-          )
-          list(type1, type2)
+          list(type1)
         }
       )
     }else if(input$simChoice == "contaminant"){
       withProgress(
         message = "Running simulations", value = 0,{
-          incProgress(1/3, detail = "Type 1 error")
+          incProgress(1/3, detail = "Only running Type 1 error")
           type1 <- simError(
             simChoice = "contaminant",
             AsPb = input$AsPb,
@@ -278,31 +224,7 @@ server <- function(input, output, session){
             dist_RBA = input$rbadist
           )
           
-          incProgress(1/3, detail = "Type 2 error")
-          
-          type2 <- simError(
-            simChoice = "contaminant",
-            AsPb = input$AsPb,
-            actLvl = input$actLvl,
-            tot_n = as.numeric(input$tot_n),
-            IVBA_n = as.numeric(input$IVBA_n),
-            compositeTF = as.logical(input$compositeTF),
-            Xaggr = input$Xaggr,
-            useMeanTot = as.logical(input$useMeanIVBA),
-            useMeanIVBA = as.logical(input$useMeanTot),
-            frcAct = -frcAct(),
-            minFrcAct = -input$minFrcAct/100,
-            maxFrcAct = -input$maxFrcAct/100,
-            CoeV_tot = CoeV_tot(),
-            CoeV_RBA = CoeV_RBA(),
-            RBAmean = RBAmean(),
-            iter = input$iter,
-            ncel = input$ncel,
-            numbins = input$numbins,
-            dist_tot = input$totdist,
-            dist_RBA = input$rbadist
-          )
-          list(type1, type2)
+          list(type1)
         }
       )
     }
@@ -319,7 +241,6 @@ server <- function(input, output, session){
       simPlot2(simResult()[[1]])
     }
     })
-  output$Type1preamble <- renderUI({HTML("Type 1 error is defined as incorrectly concluding the bioavailable metal fraction for the decision unit is below the action level when, in reality, it is above the action level. EPA has set guidance that the probability of making a type 1 error should be < 5%.")})
   output$Type1text <- renderUI({HTML(simText(simResult()[[1]]))})
   output$Type1warn <- renderText({
     validate(
@@ -327,33 +248,18 @@ server <- function(input, output, session){
     )
     paste0(simResult()[[1]]$sim_attributes$simWarnings, collapse = " ")
     })
-  output$Type2plot <- renderPlot({
-    if(input$simChoice == "sample"){
-      simPlot(simResult()[[2]])
-    }else if(input$simChoice == "contaminant"){
-      simPlot2(simResult()[[2]])
-    }
-  })
-  output$Type2preamble <- renderUI({HTML("Type 2 error is defined as incorrectly concluding the bioavailable metal fraction for the decision unit is above the action level when, in reality, it is below the action level. EPA has set guidance that the probability of making a type 2 error should be < 20%.")})
-  output$Type2text <- renderUI({HTML(simText(simResult()[[2]]))})
-  output$Type2warn <- renderText({
-    validate(
-      need(simResult()[[2]]$sim_attributes$simWarnings, NULL)
-    )
-    paste0(simResult()[[2]]$sim_attributes$simWarnings, collapse = " ")
-  })
+
   output$finalText <- renderUI({
     if(input$simChoice == "sample"){
-      HTML("Click on the <b>Sample Simulation</b> tab to see how increasing the number of samples analyzed for total concentration and IVBA improves Type 1 and 2 error probability.")
+      HTML("Click on the <b>Sample Simulation</b> tab to see how increasing the number of samples analyzed for total concentration and IVBA improves Type 1 or 2 error probability.")
     }else if(input$simChoice == "contaminant"){
-      HTML("Click on the <b>Sample Simulation</b> tab to see how Type 1 and 2 error probability changes with actual contamination level.")
+      HTML("Click on the <b>Sample Simulation</b> tab to see how Type 1 or 2 error probability changes with actual contamination level.")
     }
     })
     
   
   # precision output
   output$Type1prec <- renderPlot({precPlot(simResult()[[1]])})
-  output$Type2prec <- renderPlot({precPlot(simResult()[[2]])})
   
   # outputs: download data
   output$downDU.type1 <- downloadHandler(
@@ -380,40 +286,10 @@ server <- function(input, output, session){
       write.csv(simResult()[[1]]$sim_attributes$samp.prd_ba, fname, row.names = FALSE)
     }
   )
-  output$downDU.type2 <- downloadHandler(
-    filename = function(){"DUsamples_type2.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[2]]$sim_attributes$samp.DUsample, fname, row.names = FALSE)
-    }
-  )
-  output$downtot.type2 <- downloadHandler(
-    filename = function(){"measTot_type2.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[2]]$sim_attributes$samp.meas_tot, fname, row.names = FALSE)
-    }
-  )
-  output$downivb.type2 <- downloadHandler(
-    filename = function(){"measIVB_type2.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[2]]$sim_attributes$samp.meas_ivb, fname, row.names = FALSE)
-    }
-  )
-  output$downprd_BA.type2 <- downloadHandler(
-    filename = function(){"prdBA_type2.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[2]]$sim_attributes$samp.prd_ba, fname, row.names = FALSE)
-    }
-  )
   output$downall.type1 <- downloadHandler(
     filename = function(){"all_type1.rds"}, 
     content = function(fname){
       saveRDS(simResult()[[1]], fname)
-    }
-  )
-  output$downall.type2 <- downloadHandler(
-    filename = function(){"all_type2.rds"}, 
-    content = function(fname){
-      saveRDS(simResult()[[2]], fname)
     }
   )
 }
