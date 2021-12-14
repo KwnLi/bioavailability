@@ -49,19 +49,26 @@ simError <- function(
   CoeV_RBA = NULL,    # assume coefficient of variation for RBA
   
   ###### SIMULATION PARAMETERS
+  error_tot = FALSE,    # include total conc. measurement error?
+  ivba_model = FALSE,   # include IVBA model error?
   dist_tot = "lognorm", # distribution of total concentration
-  dist_RBA = "normal", # distribution of RBA
+  dist_RBA = "normal",  # distribution of RBA
   iter = 1000,          # nr. simulations
-  ncel = 1000,          # nr. cells in the decision unit
   sampmax = NULL,       # maximum number of samples to simulate (simChoice = "sample")
   numbins = NULL        # nr. divisions over range of contaminant levels (simChoice = "contaminant")
   
 ){
   
   # define inverse model to calculate observed IVBA from true RBA 
-  fy <- function(y, m, b) {
-    x = (y - rnorm(1,0,sepred) - b)/m
-    return(max(0,x))}
+  if(ivba_model){
+    fy <- function(y, m, b) {
+      x = (y - rnorm(1,0,sepred) - b)/m
+      return(max(0,x))}
+  }else{
+    fy <- function(y, m, b) {
+      x = (y - b)/m
+      return(max(0,x))}
+  }
   
   # define direct model, from mean measured IVBA to estimated RBA
   fx <- function(x, m, b) { 
@@ -119,8 +126,8 @@ simError <- function(
     dim.x <- Ysamp                  # parameter for creating output matrix
   }else if (simChoice == "contaminant"){
     Ysamp <- sampstart              # only simulate user-supplied sampling protocol for "contaminant"
-    frcAct <- c(frcAct, round(seq(from = ifelse(minFrcAct>-1,minFrcAct,-0.1), 
-                        to = ifelse(maxFrcAct>-1,maxFrcAct,-0.99), 
+    frcAct <- c(frcAct, round(seq(from = ifelse(minFrcAct>-1,minFrcAct,-0.99), 
+                        to = ifelse(maxFrcAct>-1,maxFrcAct,-0.01), 
                         length.out = numbins), 2))
     sim.num <- length(frcAct)       # parameter for creating output matrix
     dim.x <- frcAct                 # parameter for creating output matrix
@@ -135,8 +142,8 @@ simError <- function(
   
   # empty dataframe lists for data checking
   samp.DUsample = NULL
-  samp.meas_tot = NULL
-  samp.meas_ivb = NULL
+  # samp.meas_tot = NULL
+  # samp.meas_ivb = NULL
   samp.prd_ba = NULL
   samp.mn = NULL
   cells <- list()
@@ -157,26 +164,24 @@ simError <- function(
     
     # generate "true" total conc. and rba data in DU
     if(dist_tot == "normal"){
-      tru_tot <- rnorm(n=ncel, mean=tru_mu_tot[i], sd=tru_mu_tot[i]*CoeV_tot)
+      tru_tot <- function(n.totmeas){rnorm(n=n.totmeas, mean=tru_mu_tot[i], sd=tru_mu_tot[i]*CoeV_tot)}
     } else if(dist_tot == "lognorm"){
-      tru_tot <- custom_rlnorm(n=ncel, m=tru_mu_tot[i], s=tru_mu_tot[i]*CoeV_tot)
+      tru_tot <- function(n.totmeas){custom_rlnorm(n=n.totmeas, m=tru_mu_tot[i], s=tru_mu_tot[i]*CoeV_tot)}
     } else{
       stop(paste("Unrecognized distribution for total concentration: ",
                  dist_tot, sep = ""))
     }
     
     if(dist_RBA == "normal"){
-      tru_rba <- rnorm(n=ncel, mean=tru_mu_rba, sd=tru_mu_rba*CoeV_RBA) 
+      tru_rba <- function(n.rbameas){rnorm(n=n.rbameas, mean=tru_mu_rba, sd=tru_mu_rba*CoeV_RBA)} 
     } else if(dist_RBA == "lognorm"){
-      tru_rba <- custom_rlnorm(n=ncel, m=tru_mu_rba, s=tru_mu_rba*CoeV_RBA) 
+      tru_rba <- function(n.rbameas){custom_rlnorm(n=n.rbameas, m=tru_mu_rba, s=tru_mu_rba*CoeV_RBA)} 
     } else if(dist_RBA == "uniform"){
-      tru_rba <- runif(n=ncel, min = 0, max = 1)
+      tru_rba <- function(n.rbameas){runif(n=n.rbameas, min = 0, max = 1)}
     } else{
       stop(paste("Unrecognized distribution for RBA: ",
                  dist_RBA, sep = ""))
     }
-    
-    cells[[i]] <- cbind(tru_tot,tru_rba)
     
     # estimate bioavailable metal and remediation error
     for (j in 1:length(Ysamp)){ # varying amount of samples 
@@ -186,51 +191,50 @@ simError <- function(
       #     For aggregated cells (Xaggr>1), mix the content of Xaggr cells for each sample
       for (k in 1:iter){
         
+        measurement_input <- cbind(tru_tot = rep(NA, Ysamp[j]), tru_rba = rep(NA, Ysamp[j]))
         # if number of aggregated samples > 1, then mix samples of cells for measurement input
         # else, treat each sample as a separate measurement input
         if(compositeTF){ # IF COMPOSITING
-          measurement_input <- NA*cells[[i]][1:Ysamp[j],]
           for (z in 1:Ysamp[j]){
-            sel_cel <- sample(1:ncel,Xaggr) # select Xaggr cells
-            measurement_input[z,] <- cells[[i]][sel_cel,] %>% colMeans() 
+            measurement_input[z,"tru_tot"] <- mean(tru_tot(Xaggr))
+            measurement_input[z,"tru_rba"] <- mean(tru_rba(Xaggr))
             # mix their properties to create Ysamp[j] new cells
           } # these are now our Ysamp[j] random cells
         }else{ # IF DISCRETE
-          measurement_input = cells[[i]][sample(1:ncel,Ysamp[j]),]
+          measurement_input[,"tru_tot"] = tru_tot(Ysamp[j])
+          measurement_input[,"tru_rba"] = tru_rba(Ysamp[j])
         }
         
         # III) (lab) measure total metal for each input, 
         #      1 time per cell
         totsamp <- tot_n + j - 1 # increase tot_n by 1 each sample increase
-        meas_tot <- rtruncnorm(n=Ysamp[j], a=0, b=Inf,
-                               mean=measurement_input[,"tru_tot"],
-                               measurement_input[,"tru_tot"]*5/100)[1:totsamp]
+        if(error_tot){
+          meas_tot <- rtruncnorm(n=Ysamp[j], a=0, b=Inf,
+                                 mean = measurement_input[,"tru_tot"],
+                                 sd = mean(measurement_input[,"tru_tot"])*.05)[1:totsamp]
+        }else{
+          meas_tot <- measurement_input[, "tru_tot"]  # directly use total concentration
+        }
         
         # measure IVBA for [IVBAsamp] measurement_input (i.e. run inverse model), 
         # 1 time per cell
         IVBAsamp <- IVBA_n + j - 1  # increase IVBA by 1 each sample increase
         meas_ivb <- sapply(measurement_input[1:IVBAsamp,"tru_rba"], fy, m=m, b=b)  # convert RBA to IVBA
         
-        # upper 95% conf. int. of the mean function:
-        upper95 <- function(x,lvl){
-          xbar = mean(x)
-          up95 = xbar + qnorm(lvl)*(sd(x)/sqrt(length(x)))
-          return(up95)
-        }
-        
         # IV, V) avg IVBA measurements, calculate DU RBA
         if(useMeanIVBA){   # if user wants to use the mean value
           est_rba_DU <- meas_ivb %>% mean() %>% fx(m=m, b=b)
-        }else{         # if user wants to use the 95% inverval value of IVBA measurements
+        }else{         # if user wants to use the 95% interval value of IVBA measurements
           est_rba_DU <- meas_ivb %>% upper95(lvl=.975) %>% fx(m=m, b=b)
         }
         
         # VI) calc bioaval total contaminant mass fraction (mg/kg) for DU 
         if(useMeanTot){   # if user wants to use the mean value
-          ba_DU <- mean(meas_tot)*est_rba_DU/100
+          est_tot_DU <- mean(meas_tot)
         }else{         # if user wants to use the 95% inverval value of total
-          ba_DU <- upper95(meas_tot, lvl=.975)*est_rba_DU/100
+          est_tot_DU <- upper95(meas_tot, lvl=.975)
         }
+        ba_DU <- est_tot_DU*est_rba_DU/100
         
         # VII) Outputs
         out.index <- ifelse(simChoice=="sample",j,i)
@@ -249,13 +253,19 @@ simError <- function(
         if(out.index==1 | out.index == sim.num){
           samp.DUsample = 
             bind_rows(samp.DUsample, 
-                      data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], measurement_input) %>% 
+                      data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], 
+                                 measurement_input, 
+                                 meas_tot = meas_tot[1:max(totsamp, IVBAsamp)],
+                                 meas_ivb = meas_ivb[1:max(totsamp, IVBAsamp)]) %>% 
                         mutate(tru_rba = replace(tru_rba, -(1:IVBAsamp), NA)) %>% # replace all not sampled with NA
                         mutate(tru_tot = replace(tru_tot, -(1:totsamp), NA))       # replace all not sampled with NA
             )
-          samp.meas_tot = bind_rows(samp.meas_tot, data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], meas_tot))
-          samp.meas_ivb = bind_rows(samp.meas_ivb, data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], meas_ivb))
-          samp.prd_ba = bind_rows(samp.prd_ba, data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], ba_DU))
+          # samp.meas_tot = bind_rows(samp.meas_tot, data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], meas_tot))
+          # samp.meas_ivb = bind_rows(samp.meas_ivb, data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], meas_ivb))
+          samp.prd_ba = bind_rows(samp.prd_ba, data.frame(iteration = k, 
+                                                          n_tot = totsamp, n_rba = IVBAsamp, 
+                                                          est_rba_DU, est_tot_DU,
+                                                          frcAct = frcAct[i], ba_DU))
         }
         if(out.index==1){
           samp.mn = bind_rows(samp.mn,
@@ -293,14 +303,20 @@ simError <- function(
                                     dist_RBA = dist_RBA,
                                     Hetvals = c(CoeV_tot = CoeV_tot, CoeV_RBA = CoeV_RBA),
                                     iter = iter, 
-                                    ncel = ncel, 
                                     sampmax = sampmax,
                                     simWarnings = simWarnings,
                                     samp.mn = samp.mn,
                                     samp.DUsample = samp.DUsample,
-                                    samp.meas_tot = samp.meas_tot, 
-                                    samp.meas_ivb = samp.meas_ivb,
+                                    # samp.meas_tot = samp.meas_tot, 
+                                    # samp.meas_ivb = samp.meas_ivb,
                                     samp.prd_ba = samp.prd_ba)))
+}
+
+# upper 95% conf. int. of the mean function:
+upper95 <- function(x,lvl){
+  xbar = mean(x)
+  up95 = xbar + qnorm(lvl)*(sd(x)/sqrt(length(x)))
+  return(up95)
 }
 
 #####Custom lognormal#####

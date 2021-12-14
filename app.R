@@ -6,8 +6,8 @@ source("app_functions_beta.R")
 ui <- fluidPage(
   useShinyjs(),
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
-  titlePanel("Simulate error in bioavailability estimation SIMPLE VERSION"),
-  helpText("Updated Oct 7, 2021"),
+    titlePanel("Simulate error in bioavailability estimation Appendix A Version 1.4"),
+  helpText("Updated Dec 14, 2021"),
 
   sidebarPanel(
     tabsetPanel(
@@ -32,14 +32,7 @@ ui <- fluidPage(
                      choices = c(`Mean value` = T, `Upper 95% CI of mean` = F)),
         hr(),
         h4("Decision Unit Assumptions"),
-        HTML(paste("<b>Note:</b> Two sets of simulations will be run:",
-                 "<br/>",
-                 "<b>1.)</b> Simulations assuming true bioavailable metal concentration is above the action level (Type 1 error is possible)",
-                 "<br/>",
-                 "<b>2.)</b> Simulations assuming true bioavailable metal concentration is below the action level (Type 2 error is possible)")),
-        br(),
-        br(),
-        radioButtons("frcAct", "Select percent above/below the action level to simulate", choices = c(`25%` = 0.25, `50%` = 0.5, "Custom"), inline=TRUE),
+        radioButtons("frcAct", "Percent below/above the action level to simulate", choices = c(`-25%` = -0.25, `25%` = 0.25, "Custom"), selected = 0.25, inline=TRUE),
         # conditional input if fraction above/below is custom
         conditionalPanel(
           condition = "input.frcAct == 'Custom'",
@@ -68,13 +61,15 @@ ui <- fluidPage(
           numericInput("RBAmean_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom mean RBA value (%):"), 50, step = 5, min = 0)),
         hr(),
         h4("Simulation Parameters"),
-        numericInput("ncel", "Number of possible unique sampling locations in simulated decision unit", value = 1000, min = 100, step = 100),
-        numericInput("iter", "Number of simulations", step = 1000, min = 100, value = 1000),
+        selectInput("error_tot", "Simulate measurement error for total concentration", choices = c(TRUE, FALSE)),
+        selectInput("ivba_model", "Simulate IVBA model error", choices = c(TRUE, FALSE)),
+        # numericInput("ncel", "Number of possible unique sampling locations in simulated decision unit", value = 1000, min = 100, step = 100),
+        numericInput("iter", "Number of simulations", step = 1000, min = 100, value = 5000),
         radioButtons("simChoice", "Select simulation type", 
                     choices = c(`Vary sample size` = "sample", `Vary contaminant level` = "contaminant")),
         conditionalPanel(
           condition = "input.simChoice == 'sample'",
-          numericInput("sampmax", label = div(style = "font-weight: normal; font-style: italic", "*Maximum number of samples to simulate:"), value = 50, min = 10)
+          numericInput("sampmax", label = div(style = "font-weight: normal; font-style: italic", "*Maximum number of samples to simulate:"), value = 0, min = 10)
         ),
         conditionalPanel(
           condition = "input.simChoice == 'contaminant'",
@@ -89,14 +84,12 @@ ui <- fluidPage(
       ),
       tabPanel(
         title = "Download",
-        h4("Type 1 simulation values"),
-        downloadButton(outputId = "downDU.type1", "DU samples"),
-        downloadButton(outputId = "downtot.type1", "Measured total soil fraction"),
-        downloadButton(outputId = "downivb.type1", "Measured IVBA"),
-        downloadButton(outputId = "downprd_BA.type1", "Predicted bioavailability"),
+        h4("Simulation values"),
+        downloadButton(outputId = "downDU", "DU samples and measured values"),
+        downloadButton(outputId = "downprd_BA", "Predicted bioavailability"),
         br(),
         h4("Simulation R data"),
-        downloadButton(outputId = "downall.type1", "Type 1 sim rds")
+        downloadButton(outputId = "downall", "Type 1 sim rds")
       )
     )
   ),
@@ -105,7 +98,7 @@ ui <- fluidPage(
     tabsetPanel(
       type = "tabs",
       tabPanel("Error Results",
-               h3("Type 1 error"),
+               h3("Error Results"),
                br(),
                htmlOutput("Type1text"),
                tags$head(tags$style("#Type1text{
@@ -173,7 +166,7 @@ server <- function(input, output, session){
     if(input$simChoice == "sample"){
       withProgress(
         message = "Running simulations", value = 0,{
-          incProgress(1/2, detail = "Just running Type 1 error")
+          incProgress(1/2, detail = "Varying sample number")
           type1 <- simError(
             simChoice = "sample",
             AsPb = input$AsPb,
@@ -188,8 +181,9 @@ server <- function(input, output, session){
             CoeV_tot = CoeV_tot(),
             CoeV_RBA = CoeV_RBA(),
             RBAmean = RBAmean(),
+            error_tot = as.logical(input$error_tot),
+            ivba_model = as.logical(input$ivba_model),
             iter = input$iter,
-            ncel = input$ncel,
             sampmax = input$sampmax,
             dist_tot = input$totdist,
             dist_RBA = input$rbadist
@@ -200,7 +194,7 @@ server <- function(input, output, session){
     }else if(input$simChoice == "contaminant"){
       withProgress(
         message = "Running simulations", value = 0,{
-          incProgress(1/3, detail = "Only running Type 1 error")
+          incProgress(1/2, detail = "Varying contaminant level")
           type1 <- simError(
             simChoice = "contaminant",
             AsPb = input$AsPb,
@@ -212,13 +206,14 @@ server <- function(input, output, session){
             useMeanTot = as.logical(input$useMeanIVBA),
             useMeanIVBA = as.logical(input$useMeanTot),
             frcAct = frcAct(),
-            minFrcAct = input$minFrcAct/100,
-            maxFrcAct = input$maxFrcAct/100,
+            minFrcAct = ifelse(frcAct()>0,input$minFrcAct,-input$maxFrcAct)/100,
+            maxFrcAct = ifelse(frcAct()>0,input$maxFrcAct,-input$minFrcAct)/100,
             CoeV_tot = CoeV_tot(),
             CoeV_RBA = CoeV_RBA(),
             RBAmean = RBAmean(),
+            error_tot = as.logical(input$error_tot),
+            ivba_model = as.logical(input$ivba_model),
             iter = input$iter,
-            ncel = input$ncel,
             numbins = input$numbins,
             dist_tot = input$totdist,
             dist_RBA = input$rbadist
@@ -262,32 +257,20 @@ server <- function(input, output, session){
   output$Type1prec <- renderPlot({precPlot(simResult()[[1]])})
   
   # outputs: download data
-  output$downDU.type1 <- downloadHandler(
-    filename = function(){"DUsamples_type1.csv"}, 
+  output$downDU <- downloadHandler(
+    filename = function(){"DUsamples.csv"}, 
     content = function(fname){
       write.csv(simResult()[[1]]$sim_attributes$samp.DUsample, fname, row.names = FALSE)
     }
   )
-  output$downtot.type1 <- downloadHandler(
-    filename = function(){"measTot_type1.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[1]]$sim_attributes$samp.meas_tot, fname, row.names = FALSE)
-    }
-  )
-  output$downivb.type1 <- downloadHandler(
-    filename = function(){"measIVB_type1.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[1]]$sim_attributes$samp.meas_ivb, fname, row.names = FALSE)
-    }
-  )
-  output$downprd_BA.type1 <- downloadHandler(
-    filename = function(){"prdBA_type1.csv"}, 
+  output$downprd_BA <- downloadHandler(
+    filename = function(){"prdBA.csv"}, 
     content = function(fname){
       write.csv(simResult()[[1]]$sim_attributes$samp.prd_ba, fname, row.names = FALSE)
     }
   )
-  output$downall.type1 <- downloadHandler(
-    filename = function(){"all_type1.rds"}, 
+  output$downall <- downloadHandler(
+    filename = function(){"all.rds"}, 
     content = function(fname){
       saveRDS(simResult()[[1]], fname)
     }
