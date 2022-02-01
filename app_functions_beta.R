@@ -209,9 +209,9 @@ simError <- function(
         #      1 time per cell
         totsamp <- tot_n + j - 1 # increase tot_n by 1 each sample increase
         if(error_tot){
-          meas_tot <- rtruncnorm(n=Ysamp[j], a=0, b=Inf,
+          meas_tot <- rtruncnorm(n=tot_n, a=0, b=Inf,
                                  mean = measurement_input[,"tru_tot"],
-                                 sd = mean(measurement_input[,"tru_tot"])*.05)[1:totsamp]
+                                 sd = mean(measurement_input[,"tru_tot"])*.05)
         }else{
           meas_tot <- measurement_input[, "tru_tot"]  # directly use total concentration
         }
@@ -399,6 +399,19 @@ simPlot2 <- function(simResult){
     theme_bw()
 }
 
+#####Plot title#####
+simTabTitle <- function(simResult){
+  
+  # Extract error type
+  errortype = simResult$errortype
+  
+  # Output text
+  return(
+    paste(ifelse(errortype=="type 1", "Type 1 ", "Type 2 "), "error simulation results",
+          sep = "")
+  )
+}
+
 #####Precision plot######
 # Plot distribution of bioavailability predictions and 95% interval
 
@@ -417,7 +430,7 @@ precPlot <- function(simResult, plot.median = FALSE){
   
   outplot <- ggplot(ba, aes(ba_DU)) + geom_histogram(fill = "cornsilk3") + 
     theme_bw() +
-    xlab("Predicted bioavailability") +
+    xlab("Predicted bioavailability") + ylab("Result frequency") +
     geom_vline(xintercept = ba_95["2.5%"], color = "red", lty = 2) +
     geom_vline(xintercept = ba_95["97.5%"], color = "red", lty = 2) +
     geom_vline(xintercept = ba_mn, color = "red") +
@@ -459,6 +472,32 @@ precPlot <- function(simResult, plot.median = FALSE){
   
 }
 
+#####Precision title#####
+precisionTabTitle <- function(simResult){
+  
+  # Extract error type
+  errortype = simResult$errortype
+  
+  # Output text
+  return(
+    paste(ifelse(errortype=="type 1", "Type 1 ", "Type 2 "), "bioavailability estimate precision",
+          sep = "")
+  )
+}
+
+#####Precision title#####
+resultTabTitle <- function(simResult){
+  
+  # Extract error type
+  errortype = simResult$errortype
+  
+  # Output text
+  return(
+    paste("Possibility of ", ifelse(errortype=="type 1", "Type 1 ", "Type 2 "), "error",
+          sep = "")
+  )
+}
+
 #####Custom Numeric Input#####
 numericInputRow <- function(inputId, label, value = NULL, step = NULL, max = NULL, min = NULL) 
 {
@@ -471,3 +510,6 @@ numericInputRow <- function(inputId, label, value = NULL, step = NULL, max = NUL
 
 # test <- simError(tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05, sampmax = 50)
 # test2 <- simError(simChoice = "contaminant", tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, CoeV_RBA = 0.05, minFrcAct = .1, maxFrcAct = .5, numbins = 10)
+# test3 <- simError(tot_n = 5, IVBA_n = 3, compositeTF = T, Xaggr = 3, 
+#                   CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05, 
+#                   sampmax = 50, useMeanTot = F, error_tot = T, ivba_model = T)

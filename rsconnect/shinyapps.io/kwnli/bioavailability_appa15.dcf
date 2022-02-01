@@ -1,0 +1,14 @@
+name: bioavailability_appa15
+title: bioavailability_appa15
+username:
+account: kwnli
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5492844
+bundleId: 5506197
+url: https://kwnli.shinyapps.io/bioavailability_appa15/
+when: 1643118638.49082
+lastSyncTime: 1643118638.49082
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app_functions_alpha.R|www/readme_draft.docx
