@@ -3,7 +3,7 @@ library(truncnorm)
 library(dplyr)
 
 #####Simulate error function#####
-simError <- function(
+simError_site <- function(
   # Are you modeling Pb or As?
   AsPb = "Pb",        # "As" or "Pb"
   
@@ -30,10 +30,7 @@ simError <- function(
   # Should heterogeneity simulation be based on mean or 95% upper level?
   useHetMnTF = TRUE,        # TRUE = use mean heterogeneity; FALSE = use upper 95%
   
-  # Input mode: measurements or % above/below action level?
-  frcMode = TRUE,    # TRUE = input is fraction above/below action level
-  
-  ##### INPUTS FOR frcMode = TRUE
+  ##### INPUTS FOR DU SIMULATION
   # fraction above/below
   tot_n = NULL,  # how many total metal concentration samples?
   IVBA_n = NULL, # how many samples analyzed for IVBA?
@@ -45,12 +42,12 @@ simError <- function(
   RBAmean = 60,     # assume RBA value
   CoeV_RBA = NULL,    # assume coefficient of variation for RBA
   
-  ##### INPUTS FOR USER-SUPPLIED MEASUREMENTS (frcMode = FALSE)
-  # Enter the total soil metal (in ppm) for each of the X samples:
-  tot = NULL,
+  ##### SITE-WIDE INPUTS
+  sim_site = TRUE,       # simulate sites?
+  siteDU_n = NULL,       # number of DU to simulate in each site
   
-  # Enter the % IVBA results for the Y samples
-  IVBA_meas = NULL,
+  site_CoeV_tot = NULL, # coefficient of variation of total concentration among site DUs
+  site_Coev_RBA = NULL, # coefficitien of variation of RBA among site DUs
   
   ###### SIMULATION PARAMETERS
   iter = 1000,       # nr. simulations
@@ -91,32 +88,9 @@ simError <- function(
     simWarnings <- append(simWarnings, "Warning: Composites of 1 sample are treated as discrete")
   }
   
-  if(frcMode){
-    tru_mu_rba <- RBAmean
-    tru_mu_tot <- ((frcAct*actLvl) + actLvl)/(tru_mu_rba/100)
-    
-    # Add a warning if IVBA_meas or tot values supplied
-    if(length(IVBA_meas)>0 | length(tot)>0){
-      simWarnings <- append(simWarnings, "Warning: Ignoring measurement inputs because you indicated no site-specific data.")
-    }
-  }else{
-    # % bioavailable metal (RBA) based on model and mean of IVBA inputs
-    tru_mu_rba <- fx(mean(IVBA_meas), m=m, b=b) 
-    
-    # mean total metal (mg/kg)
-    tru_mu_tot  <- mean(tot)
-    
-    # numbers of samples (for simulations)
-    tot_n = length(tot)         # number of total samples
-    IVBA_n = length(IVBA_meas)  # number of IVBA measurements
-    
-    # fraction increase in mean bioavailable metal (mg/kg) above the action level
-    if(useMeanTot){   # if user wants to use the mean value
-      frcAct <- (tru_mu_rba/100*tru_mu_tot - actLvl)/actLvl
-    }else{         # if user wants to use the 95% inverval value of total contaminant
-      frcAct <- (tru_mu_rba/100*quantile(tot,.95) - actLvl)/actLvl
-    }
-  }
+  tru_mu_rba <- RBAmean
+  tru_mu_tot <- ((frcAct*actLvl) + actLvl)/(tru_mu_rba/100)
+  
   if(IVBA_n > tot_n) stop("more IVBA samples than total samples")
   
   # relative sdv of RBA and total metal (based on what measurements?)
@@ -132,9 +106,6 @@ simError <- function(
       CoeV_RBA <- ifelse(useHetMnTF, 1.118799762, 0.452062439)
       CoeV_tot <- ifelse(useHetMnTF, 0.452062439, 1.118799762)
     }
-  }else if(heterogeneity == "sample"){  # if calculating from input data
-    CoeV_RBA <- IVBA_meas %>% fx(m=m, b=b) %>% cv()
-    CoeV_tot <- tot %>% cv()
   }
   
   # vector of possible sample numbers, starting from user-supplied value

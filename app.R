@@ -54,6 +54,25 @@ ui <- fluidPage(
         em(conditionalPanel(
           condition = "input.RBAmean == 'Custom'",
           numericInput("RBAmean_custom", "Custom mean RBA value (%):", 50, step = 5, min = 0))),
+        
+        # Make multiple simulations
+        h4("Site-wide Assumptions"),
+        
+        radioButtons("site_CoeV_tot", "Assumed CoV for total metal concentration = ", 
+                     choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
+        # conditional input if metal CoV is custom
+        em(conditionalPanel(
+          condition = "input.site_CoeV_tot == 'Custom'",
+          numericInput("site_CoeV_tot_custom", "Custom metal CoV value:", 0.75, step = 0.05, min = 0))),
+        
+        radioButtons("site_CoeV_RBA", "Assumed CoV for RBA = ", 
+                     choices = c(0.05, 0.15, 0.30, "Custom"), inline=TRUE),
+        # conditional input if RBA CoV is custom
+        em(conditionalPanel(
+          condition = "input.site_CoeV_RBA == 'Custom'",
+          numericInput("site_CoeV_RBA_custom", "Custom RBA CoV value:", 0.10, step = 0.05, min = 0))),
+        
+        # Simulation parameters
         h4("Simulation Parameters"),
         numericInput("ncel", "Number of possible unique sampling locations in simulated decision unit", value = 1000, min = 100, step = 100),
         numericInput("iter", "Number of simulations", step = 1000, min = 100, value = 1000),
