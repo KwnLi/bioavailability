@@ -48,7 +48,7 @@ simError_site <- function(
   
   # Site-level coefficient of variation
   site_CoeV_tot = NULL, # coefficient of variation of total concentration among site DUs
-  site_Coev_RBA = NULL, # coefficient of variation of RBA among site DUs
+  site_CoeV_RBA = NULL, # coefficient of variation of RBA among site DUs
   
   ###### SIMULATION PARAMETERS
   error_tot = FALSE,    # include total conc. measurement error?
@@ -76,14 +76,14 @@ simError_site <- function(
   
   # relative sdv of RBA and total metal (based on what measurements?)
   if(heterogeneity == "user"){
-    site_Coev_RBA <- site_Coev_RBA
+    site_CoeV_RBA <- site_CoeV_RBA
     site_CoeV_tot <- site_CoeV_tot
   }else if(heterogeneity == "default"){  # if using default mean heterogeneity
     if(AsPb == "Pb"){
       site_CoeV_RBA <- ifelse(useHetMnTF, 0.55, 0.95) # use mean value, else use 95% level
       site_CoeV_tot <- ifelse(useHetMnTF, 1.12, 1.52)
     } else if(AsPb == "As"){
-      site_Coev_RBA <- ifelse(useHetMnTF, 1.118799762, 0.452062439)
+      site_CoeV_RBA <- ifelse(useHetMnTF, 1.118799762, 0.452062439)
       site_CoeV_tot <- ifelse(useHetMnTF, 0.452062439, 1.118799762)
     }
   }
@@ -120,13 +120,11 @@ simError_site <- function(
                dist_RBA, sep = ""))
   }
   
-  # initialize output matrices 
-  mx_errYN <- array(rep(NA, length(Ysamp)*iter), dim=c(length(Ysamp),iter),
-                    dimnames = list(Ysamp,
-                                    paste("i=",1:iter,sep=""))) # matrix of hit(Yes error)/misses(No error)
+  # initialize output list
+  decision_error <- list()
   
-  prd_ba <- mx_errYN # predicted bioavailable metal (mg/kg) for the decision unit
-  
+  # prd_ba <- mx_errYN # predicted bioavailable metal (mg/kg) for the decision unit
+  # 
   # empty dataframes for data checking
   samp.DUsample = NULL
   samp.meas_tot = NULL
@@ -135,15 +133,6 @@ simError_site <- function(
   
   # I) Create realistic true total metal and RBA 
   #    [i.e. populate synthetic decision unit]
-
-  # estimate bioavailable metal and remediation error
-  for (j in 1:length(Ysamp)){ # varying amount of samples 
-    print(paste("Simulating samples=",Ysamp[j]))
-    
-    # II) create Ysamp[j] aggregate(i.e. composite) or discrete measurement inputs 
-    #     For aggregated cells (Xaggr>1), mix the content of Xaggr cells for each sample
-
-  } # ... over nr samples
   
   for (k in 1:iter){
     
@@ -159,7 +148,6 @@ simError_site <- function(
     raw_tot <- list()
     raw_rba <- list()
     
-    # starttime = Sys.time()
     for(i in 1:siteDU_n){
       raw_tot[[i]] <- expand.grid(
         DU_id = i,
@@ -173,13 +161,6 @@ simError_site <- function(
             dimnames = list(c(), paste("iter", 1:DU_iter, sep = "_"))
           )
         )
-      # raw_tot[[i]] <- data.frame(
-      #   DU_id = i,
-      #   DU_iter = rep(1:DU_iter, each = tot_n*Xaggr),  # label for the DU iteration nr.
-      #   DU_sample = rep(rep(1:tot_n, each = Xaggr), times = DU_iter),
-      #   comp = rep(1:Xaggr, times = tot_n*DU_iter),
-      #   tot_conc = tru_tot(DU_iter*tot_n*Xaggr, mn.tot = sim_DU_means_k[i,"DU_tot"])
-      # )
       
       raw_rba[[i]] <- expand.grid(
         DU_id = i,
@@ -193,17 +174,7 @@ simError_site <- function(
             dimnames = list(c(), paste("iter", 1:DU_iter, sep = "_"))
           )
         )
-
-      # raw_rba[[i]] <- data.frame(
-      #   DU_id = i,
-      #   DU_iter = rep(1:DU_iter, each = IVBA_n*Xaggr),  # label for the DU iteration nr.
-      #   DU_sample = rep(rep(1:IVBA_n, each = Xaggr), times = DU_iter),
-      #   comp = rep(1:Xaggr, times = IVBA_n*DU_iter),
-      #   rba_conc = tru_rba(DU_iter*IVBA_n*Xaggr, mn.rba = sim_DU_means_k[i,"DU_rba"])
-      # )
     }
-    
-    # Sys.time() - starttime
     
     raw_tot <- bind_rows(raw_tot)
     raw_rba <- bind_rows(raw_rba)
@@ -259,34 +230,34 @@ simError_site <- function(
     }
     
     ba_DU <- est_tot_DU %>% select(starts_with("iter")) * est_rba_DU %>% select(starts_with("iter"))/100
-    
     # exceeding threshold in this simulation, Y/N?
     if (frcAct>0){
-      mx_errYN <- ba_DU<actLvl %>% mutate(across(everything(), ~numeric(.x))) %>%
-        mutate(prob = rowSums(across(everything()))/DU_iter) # for t1 error
+      decision_error[[k]] <- rowSums(ba_DU<actLvl)/DU_iter # for t1 error
     }else{
-      mx_errYN <- ba_DU>actLvl # for t2 error
+      decision_error[[k]] <- rowSums(ba_DU>actLvl)/DU_iter # for t2 error
     }
     
-    # store bioavailable metal for DU for this simulation
-    prd_ba[j,k] <- ba_DU
+    # store bioavailable metal for DU for this simulation (not currently implemented)
+    # samp.prd_ba[[k]] <- ba_DU
     
     # output for error checking:
-    if(j==1 | j == length(Ysamp)){
+    if(k==1){
       samp.DUsample = 
         bind_rows(samp.DUsample, 
-                  data.frame(iteration = k, samples = Ysamp[j], measurement_input) %>% 
-                    mutate(tru_rba = replace(tru_rba, -(1:IVBAsamp), NA)) # replace all not sampled with NA
+                  data.frame(iteration = k, value = "total", measurement_input_tot),
+                  data.frame(iteration = k, value = "rba", measurement_input_rba)
         )
-      samp.meas_tot = bind_rows(samp.meas_tot, data.frame(iteration = k, samples = Ysamp[j], meas_tot))
-      samp.meas_ivb = bind_rows(samp.meas_ivb, data.frame(iteration = k, samples = Ysamp[j], meas_ivb))
-      samp.prd_ba = bind_rows(samp.prd_ba, data.frame(iteration = k, samples = Ysamp[j], ba_DU))
+      samp.meas_tot = bind_rows(samp.meas_tot, data.frame(iteration = k, meas_tot))
+      samp.meas_ivb = bind_rows(samp.meas_ivb, data.frame(iteration = k, meas_ivb))
+      samp.prd_ba = bind_rows(samp.prd_ba, data.frame(iteration = k, est_tot_DU %>% select(!starts_with("iter")), ba_DU))
     }
     
   } # loop over sim
   
-  err_pb <- data.frame(samples = as.numeric(dimnames(mx_errYN)[[1]]),
-                       probability =apply(mx_errYN, 1, mean)*100 # transform Y/N into prob of type I or II errors
+  err_pb <- data.frame(
+    iteration = 1:iter,
+    matrix(unlist(decision_error), ncol = siteDU_n, byrow = T,
+                          dimnames = list(c(), paste("DU", 1:siteDU_n, sep = "_")))
   )
   
   return(list(frcAct = frcAct, 
@@ -303,10 +274,8 @@ simError_site <- function(
                                     useMeanTot = useMeanTot, 
                                     useMeanIVBA = useMeanIVBA,
                                     heterogeneity = heterogeneity,
-                                    Hetvals = c(CoeV_tot = CoeV_tot, CoeV_RBA = CoeV_RBA),
-                                    iter = iter, 
-                                    ncel = ncel, 
-                                    sampmax = sampmax,
+                                    Hetvals = c(site_CoeV_tot = site_CoeV_tot, site_CoeV_RBA = site_CoeV_RBA),
+                                    iter = iter,
                                     simWarnings = simWarnings,
                                     samp.DUsample = samp.DUsample,
                                     samp.meas_tot = samp.meas_tot, 
@@ -375,7 +344,7 @@ fxy <- function(input = NULL,
     m = 0.878       # from OSWER 9285.7-77 (May 2007)
     b = -2.81
   }else{
-    stop("no valid metal indicated")
+    stop("no valid metal provided")
   }
   
   if(input.type == "RBA"){  # formerly "y"
@@ -573,8 +542,7 @@ numericInputRow <- function(inputId, label, value = NULL, step = NULL, max = NUL
                  class="input-small"))
 }
 
-# test <- simError(tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05, sampmax = 50)
-# test2 <- simError(simChoice = "contaminant", tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, CoeV_RBA = 0.05, minFrcAct = .1, maxFrcAct = .5, numbins = 10)
-# test3 <- simError(tot_n = 5, IVBA_n = 3, compositeTF = T, Xaggr = 3, 
-#                   CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05, 
-#                   sampmax = 50, useMeanTot = F, error_tot = T, ivba_model = T)
+test <- simError_site(siteDU_n = 5, tot_n = 5, IVBA_n = 3, compositeTF = T, Xaggr = 3, 
+                      site_CoeV_tot = 0.5, frcAct = 0.25, site_CoeV_RBA = 0.05,
+                      useMeanTot = T, error_tot = T, ivba_model = T,
+                      iter = 10)
