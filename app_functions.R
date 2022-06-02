@@ -35,9 +35,9 @@ simError_site <- function(
   tot_n = NULL,  # how many total metal concentration samples?
   IVBA_n = NULL, # how many samples analyzed for IVBA?
   
-  frcAct = NULL,    # fraction of the action level threshold
+  tru_mu_tot = NULL,    # sitewide total to assume
   
-  RBAmean = 60,     # assume RBA value
+  tru_mu_rba = 60,      # sitewide RBA value to assume
   
   # coefficient of variation for DUs. Keep same as the site
   # CoeV_tot = NULL,     # assume coefficient of variation for total metal conc.
@@ -55,7 +55,6 @@ simError_site <- function(
   ivba_model = FALSE,   # include IVBA model error?
   dist_tot = "lognorm", # distribution of total concentration
   dist_RBA = "normal",  # distribution of RBA
-  iter = 1000,       # nr. SITE simulations
   DU_iter = 1000     # nr. DU simulations
 ){
   
@@ -69,10 +68,6 @@ simError_site <- function(
     compositeTF <- F
     simWarnings <- append(simWarnings, "Warning: Composites of 1 sample are treated as discrete")
   }
-  
-  # Define "true" total and RBA for site
-  tru_mu_rba <- RBAmean
-  tru_mu_tot <- ((frcAct*actLvl) + actLvl)/(tru_mu_rba/100)
   
   # relative sdv of RBA and total metal (based on what measurements?)
   if(heterogeneity == "user"){
@@ -122,149 +117,133 @@ simError_site <- function(
   
   # initialize output list
   decision_error <- list()
-  
-  # prd_ba <- mx_errYN # predicted bioavailable metal (mg/kg) for the decision unit
-  # 
-  # empty dataframes for data checking
-  samp.DUsample = NULL
-  samp.meas_tot = NULL
-  samp.meas_ivb = NULL
-  samp.prd_ba = NULL
-  
+
   # I) Create realistic true total metal and RBA 
   #    [i.e. populate synthetic decision unit]
   
-  for (k in 1:iter){
-    
-    # generate plausible DU means
-    sim_DU_means_k <- cbind(
-      DU_tot = tru_tot(n.totmeas = siteDU_n, mn.tot = tru_mu_tot),
-      DU_rba = tru_rba(n.rbameas = siteDU_n, mn.rba = tru_mu_rba)
+  
+  # generate plausible DU means (the simulation TRUE values)
+  sim_DU_means <- data.frame(
+    DU_tot = tru_tot(n.totmeas = siteDU_n, mn.tot = tru_mu_tot),
+    DU_rba = tru_rba(n.rbameas = siteDU_n, mn.rba = tru_mu_rba)
+  ) %>% 
+    mutate(DU_ba = DU_tot * DU_rba/100)
+  
+  # if number of aggregated samples > 1, then mix samples of cells for measurement input
+  # else, treat each sample as a separate measurement input
+  
+  raw_tot <- list()
+  raw_rba <- list()
+  
+  for(i in 1:siteDU_n){
+    raw_tot[[i]] <- expand.grid(
+      DU_id = i,
+      DU_sample = 1:tot_n,
+      comp = 1:Xaggr
+    ) %>%
+      bind_cols(
+        matrix(
+          tru_tot(DU_iter*tot_n*Xaggr, mn.tot = sim_DU_means[i,"DU_tot"]),
+          nrow = tot_n*Xaggr,
+          dimnames = list(c(), paste("iter", 1:DU_iter, sep = "_"))
+        )
       )
     
-    # if number of aggregated samples > 1, then mix samples of cells for measurement input
-    # else, treat each sample as a separate measurement input
-    
-    raw_tot <- list()
-    raw_rba <- list()
-    
-    for(i in 1:siteDU_n){
-      raw_tot[[i]] <- expand.grid(
-        DU_id = i,
-        DU_sample = 1:tot_n,
-        comp = 1:Xaggr
-      ) %>%
-        bind_cols(
-          matrix(
-            tru_tot(DU_iter*tot_n*Xaggr, mn.tot = sim_DU_means_k[i,"DU_tot"]),
-            nrow = tot_n*Xaggr,
-            dimnames = list(c(), paste("iter", 1:DU_iter, sep = "_"))
-          )
+    raw_rba[[i]] <- expand.grid(
+      DU_id = i,
+      DU_sample = 1:IVBA_n,
+      comp = 1:Xaggr
+    ) %>%
+      bind_cols(
+        matrix(
+          tru_rba(DU_iter*IVBA_n*Xaggr, mn.rba = sim_DU_means[i,"DU_rba"]),
+          nrow = IVBA_n*Xaggr,
+          dimnames = list(c(), paste("iter", 1:DU_iter, sep = "_"))
         )
-      
-      raw_rba[[i]] <- expand.grid(
-        DU_id = i,
-        DU_sample = 1:IVBA_n,
-        comp = 1:Xaggr
-      ) %>%
-        bind_cols(
-          matrix(
-            tru_rba(DU_iter*IVBA_n*Xaggr, mn.rba = sim_DU_means_k[i,"DU_rba"]),
-            nrow = IVBA_n*Xaggr,
-            dimnames = list(c(), paste("iter", 1:DU_iter, sep = "_"))
-          )
-        )
-    }
-    
-    raw_tot <- bind_rows(raw_tot)
-    raw_rba <- bind_rows(raw_rba)
-    
-    if(compositeTF){ # IF COMPOSITING
-      measurement_input_tot <- raw_tot %>% group_by(DU_id, DU_sample) %>% select(-comp) %>%
-        dplyr::summarize(across(.fns = mean), .groups = "drop")
-      
-      measurement_input_rba <- raw_rba %>% group_by(DU_id, DU_sample) %>% select(-comp) %>%
-        dplyr::summarize(across(.fns = mean), .groups = "drop")
-    }else{ # IF DISCRETE
-      measurement_input_tot <- raw_tot %>% select(-comp)
-      measurement_input_rba <- raw_rba %>% select(-comp)
-    }
-    
-    # III) (lab) measure total metal for each input, 
-    #      1 time per cell
-    if(error_tot){
-      meas_tot <- mutate(measurement_input_tot, 
-                         across(starts_with("iter"), 
-                                ~ rtruncnorm(n=1, a=0, b=Inf, mean=.x, sd=.x*5/100)))
-    }else{
-      meas_tot <- measurement_input_tot
-    }
-
-    
-    # measure IVBA for [IVBAsamp] measurement_input (i.e. run inverse model), 
-    # 1 time per cell
-    meas_ivb <- mutate(measurement_input_rba, 
-                       across(starts_with("iter"), 
-                              ~ fxy(input = .x, input.type = "RBA", metal = AsPb, model.error = ivba_model)))
-    
-    # NEXT STEP: CALCULATE DU MEANS/95CI OVER ITERATIONS - use grouping and across()
-    
-    # IV, V) avg IVBA measurements, calculate DU RBA
-    if(useMeanIVBA){   # if user wants to use the mean value
-      est_rba_DU <- meas_ivb %>% group_by(DU_id) %>% 
-        summarize(across(starts_with("iter"), .fns = mean), .groups = "drop") %>%
-        mutate(across(starts_with("iter"), ~ fxy(input = .x, input.type = "IVBA", metal = AsPb)))
-    }else{         # if user wants to use the 95% inverval value of IVBA measurements
-      est_rba_DU <- meas_ivb %>% group_by(DU_id) %>% 
-        summarize(across(starts_with("iter"), ~ upper95(.x, lvl = 0.975)), .groups = "drop") %>%
-        mutate(across(starts_with("iter"), ~ fxy(input = .x, input.type = "IVBA", metal = AsPb)))
-    }
-    
-    # VI) calc bioaval total contaminant mass fraction (mg/kg) for DU 
-    if(useMeanTot){   # if user wants to use the mean value
-      est_tot_DU <- meas_tot %>% group_by(DU_id) %>% 
-        summarize(across(starts_with("iter"), .fns = mean), .groups = "drop")
-    }else{         # if user wants to use the 95% inverval value of total
-      est_tot_DU <- meas_tot %>% group_by(DU_id) %>% 
-        summarize(across(starts_with("iter"), ~ upper95(.x, lvl = 0.975)), .groups = "drop")
-    }
-    
-    ba_DU <- est_tot_DU %>% select(starts_with("iter")) * est_rba_DU %>% select(starts_with("iter"))/100
-    # exceeding threshold in this simulation, Y/N?
-    if (frcAct>0){
-      decision_error[[k]] <- rowSums(ba_DU<actLvl)/DU_iter # for t1 error
-    }else{
-      decision_error[[k]] <- rowSums(ba_DU>actLvl)/DU_iter # for t2 error
-    }
-    
-    # store bioavailable metal for DU for this simulation (not currently implemented)
-    # samp.prd_ba[[k]] <- ba_DU
-    
-    # output for error checking:
-    if(k==1){
-      samp.DUsample = 
-        bind_rows(samp.DUsample, 
-                  data.frame(iteration = k, value = "total", measurement_input_tot),
-                  data.frame(iteration = k, value = "rba", measurement_input_rba)
-        )
-      samp.meas_tot = bind_rows(samp.meas_tot, data.frame(iteration = k, meas_tot))
-      samp.meas_ivb = bind_rows(samp.meas_ivb, data.frame(iteration = k, meas_ivb))
-      samp.prd_ba = bind_rows(samp.prd_ba, data.frame(iteration = k, est_tot_DU %>% select(!starts_with("iter")), ba_DU))
-    }
-    
-  } # loop over sim
+      )
+  }
   
-  err_pb <- data.frame(
-    iteration = 1:iter,
-    matrix(unlist(decision_error), ncol = siteDU_n, byrow = T,
-                          dimnames = list(c(), paste("DU", 1:siteDU_n, sep = "_")))
+  raw_tot <- bind_rows(raw_tot)
+  raw_rba <- bind_rows(raw_rba)
+  
+  if(compositeTF){ # IF COMPOSITING
+    measurement_input_tot <- raw_tot %>% group_by(DU_id, DU_sample) %>% select(-comp) %>%
+      dplyr::summarize(across(.fns = mean), .groups = "drop")
+    
+    measurement_input_rba <- raw_rba %>% group_by(DU_id, DU_sample) %>% select(-comp) %>%
+      dplyr::summarize(across(.fns = mean), .groups = "drop")
+  }else{ # IF DISCRETE
+    measurement_input_tot <- raw_tot %>% select(-comp)
+    measurement_input_rba <- raw_rba %>% select(-comp)
+  }
+  
+  # III) (lab) measure total metal for each input, 
+  #      1 time per cell
+  if(error_tot){
+    meas_tot <- mutate(measurement_input_tot, 
+                       across(starts_with("iter"), 
+                              ~ rtruncnorm(n=1, a=0, b=Inf, mean=.x, sd=.x*5/100)))
+  }else{
+    meas_tot <- measurement_input_tot
+  }
+  
+  
+  # measure IVBA for [IVBAsamp] measurement_input (i.e. run inverse model), 
+  # 1 time per cell
+  meas_ivb <- mutate(measurement_input_rba, 
+                     across(starts_with("iter"), 
+                            ~ fxy(input = .x, input.type = "RBA", metal = AsPb, model.error = ivba_model)))
+  
+  # NEXT STEP: CALCULATE DU MEANS/95CI OVER ITERATIONS - use grouping and across()
+  
+  # IV, V) avg IVBA measurements, calculate DU RBA
+  if(useMeanIVBA){   # if user wants to use the mean value
+    est_rba_DU <- meas_ivb %>% group_by(DU_id) %>% 
+      summarize(across(starts_with("iter"), .fns = mean), .groups = "drop") %>%
+      mutate(across(starts_with("iter"), ~ fxy(input = .x, input.type = "IVBA", metal = AsPb)))
+  }else{         # if user wants to use the 95% inverval value of IVBA measurements
+    est_rba_DU <- meas_ivb %>% group_by(DU_id) %>% 
+      summarize(across(starts_with("iter"), ~ upper95(.x, lvl = 0.975)), .groups = "drop") %>%
+      mutate(across(starts_with("iter"), ~ fxy(input = .x, input.type = "IVBA", metal = AsPb)))
+  }
+  
+  # VI) calc bioaval total contaminant mass fraction (mg/kg) for DU 
+  if(useMeanTot){   # if user wants to use the mean value
+    est_tot_DU <- meas_tot %>% group_by(DU_id) %>% 
+      summarize(across(starts_with("iter"), .fns = mean), .groups = "drop")
+  }else{         # if user wants to use the 95% inverval value of total
+    est_tot_DU <- meas_tot %>% group_by(DU_id) %>% 
+      summarize(across(starts_with("iter"), ~ upper95(.x, lvl = 0.975)), .groups = "drop")
+  }
+  
+  ba_DU <- est_tot_DU %>% select(starts_with("iter")) * est_rba_DU %>% select(starts_with("iter"))/100
+  # exceeding threshold in this simulation, Y/N?
+  DU_type1 <- sim_DU_means$DU_ba > actLvl  # type 1 error possible
+  DU_type2 <- sim_DU_means$DU_ba < actLvl  # type 2 error possible
+  
+  decision_error_t1 <- rowSums((ba_DU < actLvl) * DU_type1)/DU_iter
+  decision_error_t2 <- rowSums((ba_DU > actLvl) * DU_type2)/DU_iter
+  
+  
+  sim_DU_error <- data.frame(
+    sim_DU_means,
+    error.type = ifelse(DU_type1, "type1", "type2"),
+    error.rate = decision_error_t1 + decision_error_t2
   )
   
-  return(list(frcAct = frcAct, 
+  samp.DUsample = 
+    bind_rows(
+              data.frame(value = "total", measurement_input_tot),
+              data.frame(value = "rba", measurement_input_rba)
+    )
+  samp.meas_tot = data.frame(meas_tot)
+  samp.meas_ivb = data.frame(meas_ivb)
+  samp.prd_ba = data.frame(est_tot_DU %>% select(!starts_with("iter")), ba_DU)
+  
+  return(list(
               tru_mu_tot = tru_mu_tot, 
-              tru_mu_rba = tru_mu_rba, 
-              errortype = ifelse(frcAct>0, "type 1", "type 2"),
-              err_pb = err_pb,
+              tru_mu_rba = tru_mu_rba,
+              sim_DU_error = sim_DU_error,
               tot_n = tot_n,
               IVBA_n = IVBA_n,
               sim_attributes = list(AsPb = AsPb,
@@ -275,7 +254,7 @@ simError_site <- function(
                                     useMeanIVBA = useMeanIVBA,
                                     heterogeneity = heterogeneity,
                                     Hetvals = c(site_CoeV_tot = site_CoeV_tot, site_CoeV_RBA = site_CoeV_RBA),
-                                    iter = iter,
+                                    DU_iter = DU_iter,
                                     simWarnings = simWarnings,
                                     samp.DUsample = samp.DUsample,
                                     samp.meas_tot = samp.meas_tot, 
@@ -543,6 +522,6 @@ numericInputRow <- function(inputId, label, value = NULL, step = NULL, max = NUL
 }
 
 test <- simError_site(siteDU_n = 5, tot_n = 5, IVBA_n = 3, compositeTF = T, Xaggr = 3, 
-                      site_CoeV_tot = 0.5, frcAct = 0.25, site_CoeV_RBA = 0.05,
-                      useMeanTot = T, error_tot = T, ivba_model = T,
-                      iter = 10)
+                      site_CoeV_tot = 0.5, site_CoeV_RBA = 0.05,
+                      tru_mu_tot = 500,
+                      useMeanTot = T, error_tot = T, ivba_model = T)
