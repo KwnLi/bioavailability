@@ -1,0 +1,14 @@
+name: bioavailability_multisite
+title: bioavailability_multisite
+username:
+account: kwnli
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6415226
+bundleId: 5969711
+url: https://kwnli.shinyapps.io/bioavailability_multisite/
+when: 1654129760.58849
+lastSyncTime: 1654129760.5885
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: all.rds|old_app_functions.R

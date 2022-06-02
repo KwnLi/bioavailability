@@ -6,10 +6,10 @@ source("app_functions.R")
 ui <- fluidPage(
   useShinyjs(),
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
-  titlePanel("Simulate error in bioavailability estimation"),
+  titlePanel("Simulate error in bioavailability estimation in a multi-decision unit site"),
   h4("Site version 0.1"),
   helpText("This tool estimates Type 1 and 2 decision errors when incorporating RBA estimates into cleanup decisions for Pb or As contaminated soils, where Type 1 error is defined as concluding the DU does not need cleanup action when it should (false compliance), and Type 2 error is defined as concluding the DU needs cleanup action when it does not (false exceedance)."),
-  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Jan 24, 2022")),
+  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Jun 1, 2022")),
   
   sidebarPanel(
     tabsetPanel(
@@ -22,6 +22,7 @@ ui <- fluidPage(
                      400, step = 10),
         hr(),
         h4("Sampling Protocol"),
+        numericInput("siteDU_n", "# of decision units", 5, min = 1),
         radioButtons("compositeTF", "Sample aggregation", choices = c(Discrete = FALSE, Composite = TRUE)),
         conditionalPanel(
           condition = "input.compositeTF == 'TRUE'",
@@ -33,7 +34,7 @@ ui <- fluidPage(
         # radioButtons("useMeanIVBA", "For IVBA, use the:", 
         #              choices = c(`Mean value` = T, `Upper 95% CI of mean` = F)),
         hr(),
-        h4("Decision Unit Assumptions"),
+        h4("Site-level Assumptions"),
         radioButtons("frcAct", "Assumed level of soil contamination to simulate (expressed in terms of % below/above the action level)", 
                      choices = c(`-25% (Type 2 error simulation)` = -0.25, 
                                  `+25% (Type 1 error simulation)` = 0.25, 
@@ -73,22 +74,7 @@ ui <- fluidPage(
         selectInput("error_tot", "Simulate measurement error for total concentration", choices = c(TRUE, FALSE)),
         selectInput("ivba_model", "Simulate IVBA model error", choices = c(TRUE, FALSE)),
         # numericInput("ncel", "Number of possible unique sampling locations in simulated decision unit", value = 1000, min = 100, step = 100),
-        numericInput("iter", "Number of simulations", step = 1000, min = 100, value = 5000),
-        hr(),
-        h4("Optional Advanced Tool-Automated Analyses"),
-        selectInput("simChoice", "Select advanced analysis type", 
-                    choices = c(`None` = "none", `Vary sample size` = "sample", `Vary contaminant level` = "contaminant")),
-        conditionalPanel(
-          condition = "input.simChoice == 'sample'",
-          numericInput("sampmax", label = div(style = "font-weight: normal; font-style: italic", "*Maximum number of samples to simulate:"), value = 10, min = 2)
-        ),
-        conditionalPanel(
-          condition = "input.simChoice == 'contaminant'",
-          HTML("<i>*Simulation range above/below action level:</i>"),
-          numericInput("minFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Minimum (%):"), value = 10, step = 10, min = 0),
-          numericInput("maxFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Maximum (%):"), value = 50, step = 10, min = 0),
-          numericInput("numbins", label = div(style = "font-weight: normal; font-style: italic", "Simulation intervals"), value = 10, min = 1)
-        ),
+        numericInput("iter", "Number of site simulations", step = 100, min = 1, value = 100),
         br(),
         
         actionButton(inputId = "go", label = "Run simulation")
@@ -107,25 +93,27 @@ ui <- fluidPage(
     tabsetPanel(
       id = "resultsTabs",
       type = "tabs",
-      tabPanel("Error Results",
-               h3(textOutput("resultTitle")),
-               br(),
-               htmlOutput("errorText"),
-               tags$head(tags$style("#errorText{
-                                 font-size: 20px;
-                                 }"))
-      ),
-      tabPanel("Precision",
-               h4(textOutput("precisionTitle")),
-               plotOutput("errorPrec")
-      ),
-      tabPanel("Tool-Automated Analysis Results",
-               h4(textOutput("SampleSimTitle")),
-               plotOutput("errorSimPlot"),
-               textOutput("errorSimWarn")
-      ),
+      # tabPanel("Error Results",
+      #          h3(textOutput("resultTitle")),
+      #          br(),
+      #          htmlOutput("errorText"),
+      #          tags$head(tags$style("#errorText{
+      #                            font-size: 20px;
+      #                            }"))
+      # ),
+      # tabPanel("Precision",
+      #          h4(textOutput("precisionTitle")),
+      #          plotOutput("errorPrec")
+      # ),
+      # tabPanel("Tool-Automated Analysis Results",
+      #          h4(textOutput("SampleSimTitle")),
+      #          plotOutput("errorSimPlot"),
+      #          textOutput("errorSimWarn")
+      # ),
       tabPanel(
         title = "Download",
+        h4("Simulated site DU errors"),
+        downloadButton(outputId = "downerr", "Simulated DU error rate data"),
         h4("Simulation values"),
         downloadButton(outputId = "downDU", "DU samples and measured values"),
         downloadButton(outputId = "downprd_BA", "Predicted bioavailability"),
@@ -166,137 +154,83 @@ server <- function(input, output, session){
       updateNumericInput(session, "Xaggr", value = 1)
     }
   })
-  observe({
-    minFrcAct = input$minFrcAct
-    maxFrcAct = input$maxFrcAct
-    updateNumericInput(session, "minFrcAct", max = maxFrcAct)
-    updateNumericInput(session, "maxFrcAct", min = minFrcAct)
-  })
+  
+  # reactive result value
+  simResult <- reactiveValues()
   
   # when simulate button is pressed
-  simResult <- eventReactive(input$go,{
-    if(input$simChoice == "sample"){
-      withProgress(
-        message = "Running simulations", value = 0,{
-          incProgress(1/2, detail = "Varying sample number")
-          type1 <- simError(
-            simChoice = "sample",
-            AsPb = input$AsPb,
-            actLvl = input$actLvl,
-            tot_n = as.numeric(input$tot_n),
-            IVBA_n = as.numeric(input$IVBA_n),
-            compositeTF = as.logical(input$compositeTF),
-            Xaggr = input$Xaggr,
-            useMeanTot = as.logical(input$useMeanTot),
-            useMeanIVBA = TRUE,
-            frcAct = frcAct(),
-            CoeV_tot = CoeV_tot(),
-            CoeV_RBA = CoeV_RBA(),
-            RBAmean = RBAmean(),
-            error_tot = as.logical(input$error_tot),
-            ivba_model = as.logical(input$ivba_model),
-            iter = input$iter,
-            sampmax = input$sampmax,
-            dist_tot = input$totdist,
-            dist_RBA = input$rbadist
-          )
-          list(type1)
-        }
-      )
-    }else if(input$simChoice == "contaminant"){
-      withProgress(
-        message = "Running simulations", value = 0,{
-          incProgress(1/2, detail = "Varying contaminant level")
-          type1 <- simError(
-            simChoice = "contaminant",
-            AsPb = input$AsPb,
-            actLvl = input$actLvl,
-            tot_n = as.numeric(input$tot_n),
-            IVBA_n = as.numeric(input$IVBA_n),
-            compositeTF = as.logical(input$compositeTF),
-            Xaggr = input$Xaggr,
-            useMeanTot = as.logical(input$useMeanTot),
-            useMeanIVBA = TRUE,
-            frcAct = frcAct(),
-            minFrcAct = ifelse(frcAct()>0,input$minFrcAct,-input$maxFrcAct)/100,
-            maxFrcAct = ifelse(frcAct()>0,input$maxFrcAct,-input$minFrcAct)/100,
-            CoeV_tot = CoeV_tot(),
-            CoeV_RBA = CoeV_RBA(),
-            RBAmean = RBAmean(),
-            error_tot = as.logical(input$error_tot),
-            ivba_model = as.logical(input$ivba_model),
-            iter = input$iter,
-            numbins = input$numbins,
-            dist_tot = input$totdist,
-            dist_RBA = input$rbadist
-          )
-          
-          list(type1)
-        }
-      )
-    }else{
-      withProgress(
-        message = "Running simulations", value = 0,{
-          incProgress(1/2, detail = "No advanced simulations selected")
-          type1 <- simError(
-            simChoice = "sample",
-            AsPb = input$AsPb,
-            actLvl = input$actLvl,
-            tot_n = as.numeric(input$tot_n),
-            IVBA_n = as.numeric(input$IVBA_n),
-            compositeTF = as.logical(input$compositeTF),
-            Xaggr = input$Xaggr,
-            useMeanTot = as.logical(input$useMeanTot),
-            useMeanIVBA = TRUE,
-            frcAct = frcAct(),
-            CoeV_tot = CoeV_tot(),
-            CoeV_RBA = CoeV_RBA(),
-            RBAmean = RBAmean(),
-            error_tot = as.logical(input$error_tot),
-            ivba_model = as.logical(input$ivba_model),
-            iter = input$iter,
-            sampmax = 0,
-            dist_tot = input$totdist,
-            dist_RBA = input$rbadist
-          )
-          list(type1)
-        }
-      )
-    }
+  observeEvent(input$go,{
+    resultlist <- list()
+    tru_mu_tot <- ((frcAct()*input$actLvl) + input$actLvl)/(RBAmean()/100)
     
+    withProgress(
+      message = "Running simulations", value = 0,{
+        for(i in 1:input$iter){
+          incProgress(1/input$iter,
+                      detail = paste("Iteration", i, sep = " "))
+          result.i <- simError_site(
+            AsPb = input$AsPb,
+            actLvl = input$actLvl,
+            tot_n = as.numeric(input$tot_n),
+            IVBA_n = as.numeric(input$IVBA_n),
+            compositeTF = as.logical(input$compositeTF),
+            Xaggr = input$Xaggr,
+            useMeanTot = as.logical(input$useMeanTot),
+            useMeanIVBA = TRUE,
+            site_CoeV_tot = CoeV_tot(),
+            site_CoeV_RBA = CoeV_RBA(),
+            tru_mu_rba = RBAmean(),
+            tru_mu_tot = tru_mu_tot,
+            error_tot = as.logical(input$error_tot),
+            ivba_model = as.logical(input$ivba_model),
+            dist_tot = input$totdist,
+            dist_RBA = input$rbadist,
+            siteDU_n = input$siteDU_n
+          )
+          resultlist[[i]] <- result.i$sim_DU_error
+
+          if(i == 1){
+            result.1 <- result.i
+          }
+        }
+      }
+    )
+    
+    simResult$DU_error <- bind_rows(resultlist)
+    simResult$iter_1 <- result.1
   })
   
   
   onclick("go", runjs("window.scrollTo(0, 50)"))  # go back to top of window
   
   # outputs: display
-  output$errorSimPlot <- renderPlot({
-    if(input$simChoice == "sample"){
-      simPlot(simResult()[[1]])
-    }else if(input$simChoice == "contaminant"){
-      simPlot2(simResult()[[1]])
-    }
-  })
-  output$errorText <- renderUI({HTML(simText(simResult()[[1]]))})
-  output$errorSimWarn <- renderText({
-    validate(
-      need(simResult()[[1]]$sim_attributes$simWarnings, NULL)
-    )
-    paste0(simResult()[[1]]$sim_attributes$simWarnings, collapse = " ")
-  })
-  output$SampleSimTitle <- renderText({
-    if(input$simChoice == "none"){
-      "No advanced simulations selected"
-    }else{
-      simTabTitle(simResult()[[1]])
-    }
-  })
-  output$precisionTitle <- renderText({
-    precisionTabTitle(simResult()[[1]])
-  })
-  output$resultTitle <- renderText({
-    resultTabTitle(simResult()[[1]])
-  })
+  # output$errorSimPlot <- renderPlot({
+  #   if(input$simChoice == "sample"){
+  #     simPlot(simResult()[[1]])
+  #   }else if(input$simChoice == "contaminant"){
+  #     simPlot2(simResult()[[1]])
+  #   }
+  # })
+  # output$errorText <- renderUI({HTML(simText(simResult()[[1]]))})
+  # output$errorSimWarn <- renderText({
+  #   validate(
+  #     need(simResult()[[1]]$sim_attributes$simWarnings, NULL)
+  #   )
+  #   paste0(simResult()[[1]]$sim_attributes$simWarnings, collapse = " ")
+  # })
+  # output$SampleSimTitle <- renderText({
+  #   if(input$simChoice == "none"){
+  #     "No advanced simulations selected"
+  #   }else{
+  #     simTabTitle(simResult()[[1]])
+  #   }
+  # })
+  # output$precisionTitle <- renderText({
+  #   precisionTabTitle(simResult()[[1]])
+  # })
+  # output$resultTitle <- renderText({
+  #   resultTabTitle(simResult()[[1]])
+  # })
   
   # output$finalText <- renderUI({
   #   if(input$simChoice == "sample"){
@@ -308,25 +242,31 @@ server <- function(input, output, session){
   
   
   # precision output
-  output$errorPrec <- renderPlot({precPlot(simResult()[[1]])})
+  # output$errorPrec <- renderPlot({precPlot(simResult()[[1]])})
   
   # outputs: download data
   output$downDU <- downloadHandler(
     filename = function(){"DUsamples.csv"}, 
     content = function(fname){
-      write.csv(simResult()[[1]]$sim_attributes$samp.DUsample, fname, row.names = FALSE)
+      write.csv(simResult$iter_1$sim_attributes$samp.DUsample, fname, row.names = FALSE)
     }
   )
   output$downprd_BA <- downloadHandler(
     filename = function(){"prdBA.csv"}, 
     content = function(fname){
-      write.csv(simResult()[[1]]$sim_attributes$samp.prd_ba, fname, row.names = FALSE)
+      write.csv(simResult$iter_1$sim_attributes$samp.prd_ba, fname, row.names = FALSE)
     }
   )
   output$downall <- downloadHandler(
     filename = function(){"all.rds"}, 
     content = function(fname){
-      saveRDS(simResult()[[1]], fname)
+      saveRDS(simResult, fname)
+    }
+  )
+  output$downerr <- downloadHandler(
+    filename = function(){"site_DU_error.csv"}, 
+    content = function(fname){
+      write.csv(simResult$DU_error, fname, row.names = FALSE)
     }
   )
 }
