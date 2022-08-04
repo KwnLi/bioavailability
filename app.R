@@ -7,9 +7,9 @@ ui <- fluidPage(
   useShinyjs(),
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
   titlePanel("Simulate error in bioavailability estimation"),
-  h4("Appendix A version 1.51"),
+  h4("Appendix A version 1.52"),
   helpText("This tool estimates Type 1 and 2 decision errors when incorporating RBA estimates into cleanup decisions for Pb or As contaminated soils, where Type 1 error is defined as concluding the DU does not need cleanup action when it should (false compliance), and Type 2 error is defined as concluding the DU needs cleanup action when it doesn't (false exceedance)."),
-  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Jan 24, 2022")),
+  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Aug 2, 2022")),
 
   sidebarPanel(
     tabsetPanel(
@@ -129,6 +129,8 @@ ui <- fluidPage(
         h4("Simulation values"),
         downloadButton(outputId = "downDU", "DU samples and measured values"),
         downloadButton(outputId = "downprd_BA", "Predicted bioavailability"),
+        downloadButton(outputId = "plotData", "Plot data"),
+        downloadButton(outputId = "plotMetadata", "Metadata"),
         br(),
         h4("Simulation R data"),
         downloadButton(outputId = "downall", "Type 1 sim rds")
@@ -327,6 +329,18 @@ server <- function(input, output, session){
     filename = function(){"all.rds"}, 
     content = function(fname){
       saveRDS(simResult()[[1]], fname)
+    }
+  )
+  output$plotData <- downloadHandler(
+    filename = function(){"plotData.csv"}, 
+    content = function(fname){
+      write.csv(extractPlotData(simResult()[[1]])[[1]], fname, row.names = FALSE)
+    }
+  )
+  output$plotMetadata <- downloadHandler(
+    filename = function(){"plotMetadata.csv"}, 
+    content = function(fname){
+      write.csv(extractPlotData(simResult()[[1]])[[2]], fname, row.names = FALSE)
     }
   )
 }

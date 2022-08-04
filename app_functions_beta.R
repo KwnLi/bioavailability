@@ -355,8 +355,38 @@ simText <- function(simResult){
 
 
 #####Output plot#####
-# Plot the error curve results by number of samples with red line for error threshold
 
+# Extract data necessary for sim plots
+extractPlotData <- function(simResult){
+  # Extract simulation variables
+  frcAct = simResult$frcAct
+  tot_n = simResult$tot_n
+  IVBA_n = simResult$IVBA_n
+  err_pb = simResult$err_pb
+  AsPb = simResult$sim_attributes$AsPb
+  errortype = simResult$errortype
+  simChoice = simResult$simChoice
+  
+  names(err_pb)[1] <- ifelse(simChoice == "sample", "samples", "pc.actlvl")
+  
+  if(simChoice == "contaminant"){
+    err_pb[,"pc.actlvl"] <- err_pb[,"pc.actlvl"]*100
+  }
+  
+  metadata <- data.frame(
+    Setting = c(
+      "Contaminant",
+      "Simulation type",
+      "Fraction above/below action level",
+      "Number of total concentration samples",
+      "Number of IVBA samples"),
+    Value = c(AsPb, simChoice, frcAct, tot_n, IVBA_n)
+  )
+  
+  return(list(err_pb, metadata))
+}
+
+# Plot the error curve results by number of samples with red line for error threshold
 simPlot <- function(simResult){
   
   # Extract simulation variables
@@ -367,10 +397,10 @@ simPlot <- function(simResult){
   AsPb = simResult$sim_attributes$AsPb
   errortype = simResult$errortype
   
-  xoffset <- ifelse(tot_n > IVBA_n, tot_n, IVBA_n)
+  # xoffset <- ifelse(tot_n > IVBA_n, tot_n, IVBA_n)
   
-  ggplot(err_pb, aes(x = simparam - xoffset, y = probability)) + geom_line() + geom_point() + 
-    xlab("Number of additional samples analyzed for both total concentraiton and IVBA") + 
+  ggplot(err_pb, aes(x = simparam, y = probability)) + geom_line() + geom_point() + 
+    xlab("Number of samples analyzed for both total concentration and IVBA") + 
     ylab(paste("Probability of", errortype, "error", sep = " ")) +
     geom_hline(yintercept = ifelse(errortype == "type 1", 5, 20), color = "red") + 
     ggtitle(paste("Change in probability of ",errortype, " error when true bioavailable ", AsPb, " is ",
@@ -424,15 +454,15 @@ precPlot <- function(simResult, plot.median = FALSE){
   actLvl = simResult$sim_attributes$actLvl
   
   # derived values
-  ba_95 = quantile(ba$ba_DU, probs=c(.025,.975))
+  ba_95 = quantile(ba$ba_DU, probs=c(.05,.80))
   ba_mn = mean(ba$ba_DU)
   ba_md = median(ba$ba_DU)
   
   outplot <- ggplot(ba, aes(ba_DU)) + geom_histogram(fill = "cornsilk3") + 
     theme_bw() +
     xlab("Predicted bioavailability") + ylab("Result frequency") +
-    geom_vline(xintercept = ba_95["2.5%"], color = "red", lty = 2) +
-    geom_vline(xintercept = ba_95["97.5%"], color = "red", lty = 2) +
+    geom_vline(xintercept = ba_95["5%"], color = "red", lty = 2) +
+    geom_vline(xintercept = ba_95["80%"], color = "red", lty = 2) +
     geom_vline(xintercept = ba_mn, color = "red") +
     geom_vline(xintercept = actLvl, color = "blue") +
     geom_hline(yintercept = 0, color = "black")
@@ -444,14 +474,14 @@ precPlot <- function(simResult, plot.median = FALSE){
   # add the line labels
   outplot <- outplot + 
     annotate(geom = "text", 
-             x = ba_95["2.5%"] - (plot.xmax/50), 
+             x = ba_95["5%"] - (plot.xmax/50), 
              y = plot.ctmax/2, 
-             label = paste("2.5% (", round(ba_95["2.5%"], 1), ")", sep = ""), color = "red",
+             label = paste("5% (", round(ba_95["5%"], 1), ")", sep = ""), color = "red",
              angle = 90) + 
     annotate(geom = "text", 
-             x = ba_95["97.5%"] - (plot.xmax/50), 
+             x = ba_95["80%"] - (plot.xmax/50), 
              y = plot.ctmax/2, 
-             label = paste("97.5% (", round(ba_95["97.5%"], 1), ")", sep = ""), color = "red",
+             label = paste("80% (", round(ba_95["80%"], 1), ")", sep = ""), color = "red",
              angle = 90) + 
     annotate(geom = "text", 
              x = ba_mn - (plot.xmax/50), 
@@ -510,6 +540,6 @@ numericInputRow <- function(inputId, label, value = NULL, step = NULL, max = NUL
 
 # test <- simError(tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05, sampmax = 50)
 # test2 <- simError(simChoice = "contaminant", tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, CoeV_RBA = 0.05, minFrcAct = .1, maxFrcAct = .5, numbins = 10)
-# test3 <- simError(tot_n = 5, IVBA_n = 3, compositeTF = T, Xaggr = 3, 
-#                   CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05, 
+# test3 <- simError(tot_n = 5, IVBA_n = 3, compositeTF = T, Xaggr = 3,
+#                   CoeV_tot = 0.5, frcAct = -0.25, CoeV_RBA = 0.05,
 #                   sampmax = 50, useMeanTot = F, error_tot = T, ivba_model = T)
