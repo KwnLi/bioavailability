@@ -5,10 +5,10 @@ account: kwnli
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5492844
-bundleId: 6229840
+bundleId: 6229900
 url: https://kwnli.shinyapps.io/bioavailability_appa15/
-when: 1661268296.81432
-lastSyncTime: 1661268296.81433
+when: 1661269082.33674
+lastSyncTime: 1661269082.33676
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: app_functions_alpha.R|www/readme_draft.docx

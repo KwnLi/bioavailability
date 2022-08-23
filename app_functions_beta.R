@@ -267,7 +267,8 @@ simError <- function(
                       data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], 
                                  measurement_input, 
                                  meas_tot = meas_tot[1:max(totsamp, IVBAsamp)],
-                                 meas_ivb = meas_ivb[1:max(totsamp, IVBAsamp)]) %>% 
+                                 meas_ivb = meas_ivb[1:max(totsamp, IVBAsamp)],
+                                 meas_rba = meas_ivb[1:max(totsamp, IVBAsamp)] %>% fx(m=m, b=b)) %>% 
                         mutate(tru_rba = replace(tru_rba, -(1:IVBAsamp), NA)) %>% # replace all not sampled with NA
                         mutate(tru_tot = replace(tru_tot, -(1:totsamp), NA))       # replace all not sampled with NA
             )
