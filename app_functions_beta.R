@@ -142,12 +142,12 @@ simError <- function(
   
   # empty dataframe lists for data checking
   samp.DUsample = NULL
+  samp.increments = NULL
   # samp.meas_tot = NULL
   # samp.meas_ivb = NULL
   samp.prd_ba = NULL
   samp.mn = NULL
   cells <- list()
-  
   
   ### SIMULATIONS ###
   
@@ -195,11 +195,18 @@ simError <- function(
         # if number of aggregated samples > 1, then mix samples of cells for measurement input
         # else, treat each sample as a separate measurement input
         if(compositeTF){ # IF COMPOSITING
+          incr_k <- list()
           for (z in 1:Ysamp[j]){
-            measurement_input[z,"tru_tot"] <- mean(tru_tot(Xaggr))
-            measurement_input[z,"tru_rba"] <- mean(tru_rba(Xaggr))
+            incr_tot <- tru_tot(Xaggr)
+            incr_rba <- tru_rba(Xaggr)
+            measurement_input[z,"tru_tot"] <- mean(incr_tot)
+            measurement_input[z,"tru_rba"] <- mean(incr_rba)
             # mix their properties to create Ysamp[j] new cells
+            incr_k[[z]] <- data.frame(iter = k, samp = z, incr = 1:Xaggr,
+                               incr_tot = incr_tot, 
+                               incr_rba = incr_rba)
           } # these are now our Ysamp[j] random cells
+          incr_k <- bind_rows(incr_k)
         }else{ # IF DISCRETE
           measurement_input[,"tru_tot"] = tru_tot(Ysamp[j])
           measurement_input[,"tru_rba"] = tru_rba(Ysamp[j])
@@ -251,6 +258,10 @@ simError <- function(
         
         # output for error checking:
         if(out.index==1 | out.index == sim.num){
+          if(compositeTF){
+            samp.increments = 
+              bind_rows(samp.increments, bind_rows(incr_k))
+          }
           samp.DUsample = 
             bind_rows(samp.DUsample, 
                       data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], 
@@ -262,10 +273,19 @@ simError <- function(
             )
           # samp.meas_tot = bind_rows(samp.meas_tot, data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], meas_tot))
           # samp.meas_ivb = bind_rows(samp.meas_ivb, data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], meas_ivb))
-          samp.prd_ba = bind_rows(samp.prd_ba, data.frame(iteration = k, 
-                                                          n_tot = totsamp, n_rba = IVBAsamp, 
-                                                          est_rba_DU, est_tot_DU,
-                                                          frcAct = frcAct[i], ba_DU))
+          samp.prd_ba =
+            bind_rows(samp.prd_ba, 
+                      data.frame(iteration = k, 
+                                 n_tot = totsamp, n_rba = IVBAsamp, 
+                                 est_tot_DU, est_rba_DU, 
+                                 sd_tot_DU = sd(meas_tot), 
+                                 sd_rba_DU = sd(meas_ivb %>% fx(m=m, b=b)),
+                                 CoV_tot_DU = sd(meas_tot)/est_tot_DU,
+                                 CoV_rba_DU = sd(meas_ivb %>% fx(m=m, b=b))/est_rba_DU,
+                                 frcAct = frcAct[i], ba_DU) %>%
+                        mutate(
+                          
+                        ))
         }
         if(out.index==1){
           samp.mn = bind_rows(samp.mn,
@@ -307,6 +327,7 @@ simError <- function(
                                     simWarnings = simWarnings,
                                     samp.mn = samp.mn,
                                     samp.DUsample = samp.DUsample,
+                                    samp.increments = samp.increments,
                                     # samp.meas_tot = samp.meas_tot, 
                                     # samp.meas_ivb = samp.meas_ivb,
                                     samp.prd_ba = samp.prd_ba)))
@@ -542,4 +563,4 @@ numericInputRow <- function(inputId, label, value = NULL, step = NULL, max = NUL
 # test2 <- simError(simChoice = "contaminant", tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, CoeV_RBA = 0.05, minFrcAct = .1, maxFrcAct = .5, numbins = 10)
 # test3 <- simError(tot_n = 5, IVBA_n = 3, compositeTF = T, Xaggr = 3,
 #                   CoeV_tot = 0.5, frcAct = -0.25, CoeV_RBA = 0.05,
-#                   sampmax = 50, useMeanTot = F, error_tot = T, ivba_model = T)
+#                   sampmax = 0, useMeanTot = F, error_tot = T, ivba_model = T)
