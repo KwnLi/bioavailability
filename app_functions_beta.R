@@ -51,6 +51,7 @@ simError <- function(
   ###### SIMULATION PARAMETERS
   error_tot = FALSE,    # include total conc. measurement error?
   ivba_model = FALSE,   # include IVBA model error?
+  post_mean = FALSE,    # calculate error after summarizing across samples?
   dist_tot = "lognorm", # distribution of total concentration
   dist_RBA = "normal",  # distribution of RBA
   iter = 1000,          # nr. simulations
@@ -60,15 +61,13 @@ simError <- function(
 ){
   
   # define inverse model to calculate observed IVBA from true RBA 
-  if(ivba_model){
-    fy <- function(y, m, b) {
-      x = (y - rnorm(1,0,sepred) - b)/m
-      return(max(0,x))}
-  }else{
-    fy <- function(y, m, b) {
-      x = (y - b)/m
-      return(max(0,x))}
-  }
+  fy_error <- function(y, m, b) {
+    x = (y - rnorm(1,0,sepred) - b)/m
+    return(max(0,x))}
+  
+  fy <- function(y, m, b) {
+    x = (y - b)/m
+    return(max(0,x))}
   
   # define direct model, from mean measured IVBA to estimated RBA
   fx <- function(x, m, b) { 
@@ -226,13 +225,23 @@ simError <- function(
         # measure IVBA for [IVBAsamp] measurement_input (i.e. run inverse model), 
         # 1 time per cell
         IVBAsamp <- IVBA_n + j - 1  # increase IVBA by 1 each sample increase
-        meas_ivb <- sapply(measurement_input[1:IVBAsamp,"tru_rba"], fy, m=m, b=b)  # convert RBA to IVBA
+        meas_ivb <- if(ivba_model & !post_mean){
+          sapply(measurement_input[1:IVBAsamp,"tru_rba"], fy_error, m=m, b=b)  # convert RBA to IVBA
+        }else{
+          sapply(measurement_input[1:IVBAsamp,"tru_rba"], fy, m=m, b=b)  # convert RBA to IVBA
+        }
         
         # IV, V) avg IVBA measurements, calculate DU RBA
         if(useMeanIVBA){   # if user wants to use the mean value
-          est_rba_DU <- meas_ivb %>% mean() %>% fx(m=m, b=b)
+          est_ivb_DU <- meas_ivb %>% mean()
         }else{         # if user wants to use the 95% interval value of IVBA measurements
-          est_rba_DU <- meas_ivb %>% upper95(lvl=.975) %>% fx(m=m, b=b)
+          est_ivb_DU <- meas_ivb %>% upper95(lvl=.975) %>% fx(m=m, b=b)
+        }
+        
+        est_rba_DU <- if(ivba_model & post_mean){
+          est_ivb_DU %>% fx(m=m, b=b) %>% fy_error(m=m, b=b) %>% fx(m=m, b=b)
+        }else{
+          est_ivb_DU %>% fx(m=m, b=b)
         }
         
         # VI) calc bioaval total contaminant mass fraction (mg/kg) for DU 
@@ -325,6 +334,9 @@ simError <- function(
                                     Hetvals = c(CoeV_tot = CoeV_tot, CoeV_RBA = CoeV_RBA),
                                     iter = iter, 
                                     sampmax = sampmax,
+                                    error_tot = error_tot,
+                                    ivba_model = ivba_model,
+                                    post_mean = post_mean,
                                     simWarnings = simWarnings,
                                     samp.mn = samp.mn,
                                     samp.DUsample = samp.DUsample,
