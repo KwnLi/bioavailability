@@ -48,6 +48,8 @@ simError <- function(
   RBAmean = 60,     # assume RBA value
   CoeV_RBA = NULL,    # assume coefficient of variation for RBA
   
+  custom_sepred = NULL, # custom sepred value, overrides defaults
+  
   ###### SIMULATION PARAMETERS
   error_tot = FALSE,    # include total conc. measurement error?
   ivba_model = FALSE,   # include IVBA model error?
@@ -83,6 +85,10 @@ simError <- function(
     sepred = 32/1.96 # from 95% prediction limit for a single Pb RBA measurement 
     m = 0.878       # from OSWER 9285.7-77 (May 2007)
     b = -2.81
+  }
+  
+  if(!is.null(custom_sepred)){
+    sepred = custom_sepred
   }
   
   # Warnings about parameter combinations
