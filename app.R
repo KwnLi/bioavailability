@@ -7,9 +7,9 @@ ui <- fluidPage(
   useShinyjs(),
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
   titlePanel("Simulate error in bioavailability estimation"),
-  h4("Appendix A version 1.53"),
+  h4("Appendix A version ivb error"),
   helpText("This tool estimates Type 1 and 2 decision errors when incorporating RBA estimates into cleanup decisions for Pb or As contaminated soils, where Type 1 error is defined as concluding the DU does not need cleanup action when it should (false compliance), and Type 2 error is defined as concluding the DU needs cleanup action when it doesn't (false exceedance)."),
-  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Aug 23, 2022")),
+  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Sept 27, 2022")),
 
   sidebarPanel(
     tabsetPanel(
