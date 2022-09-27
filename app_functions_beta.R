@@ -52,8 +52,10 @@ simError <- function(
   
   ###### SIMULATION PARAMETERS
   error_tot = FALSE,    # include total conc. measurement error?
+  error_ivb = FALSE,    # include IVBA measurement error?
+  error_ivb_cv = NULL,  # IVBA measurement error coefficient of variation
   ivba_model = FALSE,   # include IVBA model error?
-  post_mean = FALSE,    # calculate error after summarizing across samples?
+  post_mean = FALSE,    # calculate IVBA model error after summarizing across samples?
   dist_tot = "lognorm", # distribution of total concentration
   dist_RBA = "normal",  # distribution of RBA
   iter = 1000,          # nr. simulations
@@ -158,6 +160,7 @@ simError <- function(
   
   # Define "true" DU values
   tru_mu_rba <- RBAmean
+  tru_mu_ivb <- fy(tru_mu_rba, m=m, b=b)
   tru_mu_tot <- NULL     # defined later
   
   # I) Create realistic true total metal and RBA based on fraction above action level
@@ -221,7 +224,7 @@ simError <- function(
         #      1 time per cell
         totsamp <- tot_n + j - 1 # increase tot_n by 1 each sample increase
         if(error_tot){
-          meas_tot <- rtruncnorm(n=tot_n, a=0, b=Inf,
+          meas_tot <- rtruncnorm(n=totsamp, a=0, b=Inf,
                                  mean = measurement_input[,"tru_tot"],
                                  sd = mean(measurement_input[,"tru_tot"])*.05)
         }else{
@@ -231,10 +234,18 @@ simError <- function(
         # measure IVBA for [IVBAsamp] measurement_input (i.e. run inverse model), 
         # 1 time per cell
         IVBAsamp <- IVBA_n + j - 1  # increase IVBA by 1 each sample increase
+        tru_ivb <- sapply(measurement_input[1:IVBAsamp,"tru_rba"], fy, m=m, b=b)  # convert RBA to IVBA
         meas_ivb <- if(ivba_model & !post_mean){
           sapply(measurement_input[1:IVBAsamp,"tru_rba"], fy_error, m=m, b=b)  # convert RBA to IVBA
         }else{
-          sapply(measurement_input[1:IVBAsamp,"tru_rba"], fy, m=m, b=b)  # convert RBA to IVBA
+          tru_ivb
+        }
+        
+        # APPLY IVBA MEASUREMENT ERROR
+        if(error_ivb){
+          meas_ivb <- rtruncnorm(n=IVBAsamp, a=0, b=100, 
+                                 mean = meas_ivb,
+                                 sd = tru_ivb*error_ivb_cv)
         }
         
         # IV, V) avg IVBA measurements, calculate DU RBA
@@ -281,6 +292,7 @@ simError <- function(
             bind_rows(samp.DUsample, 
                       data.frame(iteration = k, n_tot = totsamp, n_rba = IVBAsamp, frcAct = frcAct[i], 
                                  measurement_input, 
+                                 tru_ivb = tru_ivb[1:max(totsamp, IVBAsamp)],
                                  meas_tot = meas_tot[1:max(totsamp, IVBAsamp)],
                                  meas_ivb = meas_ivb[1:max(totsamp, IVBAsamp)],
                                  meas_rba = meas_ivb[1:max(totsamp, IVBAsamp)] %>% fx(m=m, b=b)) %>% 
@@ -341,6 +353,8 @@ simError <- function(
                                     iter = iter, 
                                     sampmax = sampmax,
                                     error_tot = error_tot,
+                                    error_ivb = error_ivb,
+                                    error_ivb_cv = error_ivb_cv,
                                     ivba_model = ivba_model,
                                     post_mean = post_mean,
                                     simWarnings = simWarnings,
@@ -580,6 +594,7 @@ numericInputRow <- function(inputId, label, value = NULL, step = NULL, max = NUL
 
 # test <- simError(tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05, sampmax = 50)
 # test2 <- simError(simChoice = "contaminant", tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, CoeV_RBA = 0.05, minFrcAct = .1, maxFrcAct = .5, numbins = 10)
-# test3 <- simError(tot_n = 5, IVBA_n = 3, compositeTF = T, Xaggr = 3,
-#                   CoeV_tot = 0.5, frcAct = -0.25, CoeV_RBA = 0.05,
-#                   sampmax = 0, useMeanTot = F, error_tot = T, ivba_model = T)
+# test3 <- simError(tot_n = 5, IVBA_n = 3, compositeTF = FALSE, Xaggr = 1,
+#                   CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05,
+#                   sampmax = 0, useMeanTot = T, error_tot = T, error_ivb = T,
+#                   error_ivb_cv = 0.05, ivba_model = F, post_mean = T)
