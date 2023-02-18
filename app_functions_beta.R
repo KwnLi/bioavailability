@@ -13,6 +13,7 @@ simError <- function(
   
   # What is the site-specific soil contaminant action level?
   actLvl = 400,       # mg/kg  (action level: limit of biovalability above which site has to be remedied)
+  actLvlRBA = 60,     # % RBA assumed in the action level
   
   # Use mean of upper 95% interval in estimation of total contaminant?
   useMeanTot = T,       # T = use the mean; F = use 95% interval
@@ -63,6 +64,8 @@ simError <- function(
   numbins = NULL        # nr. divisions over range of contaminant levels (simChoice = "contaminant")
   
 ){
+  ### CREATE ADJUSTED ACTION LEVEL ###
+  actLvl.adj <- actLvl * (actLvlRBA/100)
   
   # define inverse model to calculate observed IVBA from true RBA 
   fy_error <- function(y, m, b) {
@@ -168,7 +171,7 @@ simError <- function(
   for (i in 1:length(frcAct)){
     print(paste("Simulating fraction from action level =",frcAct[i]))
     
-    tru_mu_tot[i] <- ((frcAct[i]*actLvl) + actLvl)/(tru_mu_rba/100)
+    tru_mu_tot[i] <- ((frcAct[i]*actLvl.adj) + actLvl.adj)/(tru_mu_rba/100)
     
     # generate "true" total conc. and rba data in DU
     if(dist_tot == "normal"){
@@ -274,9 +277,9 @@ simError <- function(
         
         # exceeding threshold in this simulation, Y/N?
         if (frcAct[1]>0){
-          mx_errYN[out.index,k] <- as.numeric(ba_DU<actLvl) # for t1 error
+          mx_errYN[out.index,k] <- as.numeric(ba_DU<actLvl.adj) # for t1 error
         }else{
-          mx_errYN[out.index,k] <- as.numeric(ba_DU>actLvl) # for t2 error
+          mx_errYN[out.index,k] <- as.numeric(ba_DU>actLvl.adj) # for t2 error
         }
         
         # store bioavailable metal for DU for this simulation
@@ -342,6 +345,8 @@ simError <- function(
               IVBA_n = IVBA_n,
               sim_attributes = list(AsPb = AsPb,
                                     actLvl = actLvl,
+                                    actLvlRBA = actLvlRBA,
+                                    actLvl.adj = actLvl.adj,
                                     compositeTF = compositeTF,
                                     Xaggr = Xaggr, 
                                     useMeanTot = useMeanTot, 
@@ -441,6 +446,7 @@ extractPlotData <- function(simResult){
 }
 
 # Plot the error curve results by number of samples with red line for error threshold
+# Vary sample number mode
 simPlot <- function(simResult){
   
   # Extract simulation variables
@@ -459,11 +465,13 @@ simPlot <- function(simResult){
     geom_hline(yintercept = ifelse(errortype == "type 1", 5, 20), color = "red") + 
     ggtitle(paste("Change in probability of ",errortype, " error when true bioavailable ", AsPb, " is ",
                   round(abs(frcAct*100),1), "% ", 
-                  ifelse(frcAct>0, "above", "below"), " the action level, \nper increase in samples analyzed for total metal and IVBA values",
+                  ifelse(frcAct>0, "above", "below"), 
+                  " the action level, \nper increase in samples analyzed for total metal and IVBA values",
                   sep = ""),) + 
     theme_bw()
 }
 
+# Vary contaminant level mode
 simPlot2 <- function(simResult){
   
   # Extract simulation variables
@@ -506,6 +514,8 @@ precPlot <- function(simResult, plot.median = FALSE){
   iter = simResult$sim_attributes$iter
   ba = simResult$sim_attributes$samp.prd_ba[1:iter,]
   actLvl = simResult$sim_attributes$actLvl
+  actLvlRBA = simResult$sim_attributes$actLvlRBA
+  actLvl.adj = simResult$sim_attributes$actLvl.adj
   
   # derived values
   ba_95 = quantile(ba$ba_DU, probs=c(.05,.80))
@@ -514,11 +524,11 @@ precPlot <- function(simResult, plot.median = FALSE){
   
   outplot <- ggplot(ba, aes(ba_DU)) + geom_histogram(fill = "cornsilk3") + 
     theme_bw() +
-    xlab("Predicted bioavailability") + ylab("Result frequency") +
+    xlab("Predicted bioavailability [mg/kg]") + ylab("Result frequency") +
     geom_vline(xintercept = ba_95["5%"], color = "red", lty = 2) +
     geom_vline(xintercept = ba_95["80%"], color = "red", lty = 2) +
     geom_vline(xintercept = ba_mn, color = "red") +
-    geom_vline(xintercept = actLvl, color = "blue") +
+    geom_vline(xintercept = actLvl.adj, color = "blue") +
     geom_hline(yintercept = 0, color = "black")
 
   # for plotting
@@ -540,12 +550,14 @@ precPlot <- function(simResult, plot.median = FALSE){
     annotate(geom = "text", 
              x = ba_mn - (plot.xmax/50), 
              y = plot.ctmax/2, 
-             label = paste("Mean =", round(ba_mn, 1), sep = " "), color = "red",
+             label = paste("Mean=", round(ba_mn, 1), sep = ""), color = "red",
              angle = 90) + 
     annotate(geom = "text", 
-             x = actLvl - (plot.xmax/50), 
+             x = actLvl.adj - (plot.xmax/50), 
              y = plot.ctmax/2, 
-             label = paste("Action level =", actLvl, sep = " "), color = "blue",
+             size = 4,
+             label = paste("Action level=", actLvl, " (assumed RBA=",
+                           actLvlRBA,"%, ", actLvl.adj, " bioavailable)", sep = ""), color = "blue",
              angle = 90)
   
   if(plot.median){
