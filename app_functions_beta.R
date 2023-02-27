@@ -556,9 +556,11 @@ precPlot <- function(simResult, plot.median = FALSE){
              x = actLvl.adj - (plot.xmax/50), 
              y = plot.ctmax/2, 
              size = 4,
-             label = paste("Action level=", actLvl, " (assumed RBA=",
-                           actLvlRBA,"%, ", actLvl.adj, " bioavailable)", sep = ""), color = "blue",
+             label = "Converted AL assuming 100% RBA", color = "blue",
              angle = 90)
+             # label = paste("Action level=", actLvl, " (assumed RBA=",
+             #               actLvlRBA,"%, ", actLvl.adj, " bioavailable)", sep = ""), color = "blue",
+             # angle = 90)
   
   if(plot.median){
     outplot <- outplot +
