@@ -1,25 +1,6 @@
-library(ggplot2)
-library(truncnorm) 
-library(dplyr)
-
-##### Regression parameters #####
-
-contaminant_params <- list(
-  As = c(
-    sepred = 19/1.96, # from 95% prediction limit for a single As RBA measurement 
-    m = 0.79,         # from https://doi.org/10.1080/15287394.2015.1134038
-    b = 3
-  ),
-  Pb = c(
-    sepred = 32/1.96, # from 95% prediction limit for a single Pb RBA measurement 
-    m = 0.878,       # from OSWER 9285.7-77 (May 2007)
-    b = -2.81
-  )
-)
-
 #####Simulate error function#####
 simError <- function(
-  # Type of simulation: vary number of samples or contaminant level?
+    # Type of simulation: vary number of samples or contaminant level?
   simChoice = "sample", # "sample" or "contaminant"
   errorType = "I",      # "I" or "II"
   
@@ -44,8 +25,8 @@ simError <- function(
   
   # What heterogeneity should be used in the simulation?
   heterogeneity = "user",   # "user" = user-supplied heterogeneity
-                            # "default" = use default heterogeneity values
-                            # "sample" = use the sample hetergeneity
+  # "default" = use default heterogeneity values
+  # "sample" = use the sample hetergeneity
   
   # Should heterogeneity simulation be based on mean or 95% upper level?
   useHetMnTF = TRUE,        # TRUE = use mean heterogeneity; FALSE = use upper 95%
@@ -152,8 +133,8 @@ simError <- function(
   }else if (simChoice == "contaminant"){
     Ysamp <- sampstart              # only simulate user-supplied sampling protocol for "contaminant"
     frcAct <- c(frcAct, round(seq(from = ifelse(minFrcAct>-1,minFrcAct,-0.99), 
-                        to = ifelse(maxFrcAct>-1,maxFrcAct,-0.01), 
-                        length.out = numbins), 2))
+                                  to = ifelse(maxFrcAct>-1,maxFrcAct,-0.01), 
+                                  length.out = numbins), 2))
     sim.num <- length(frcAct)       # parameter for creating output matrix
     dim.x <- frcAct                 # parameter for creating output matrix
   }
@@ -229,8 +210,8 @@ simError <- function(
             measurement_input[z,"tru_rba"] <- mean(incr_rba)
             # mix their properties to create Ysamp[j] new cells
             incr_k[[z]] <- data.frame(iter = k, samp = z, incr = 1:Xaggr,
-                               incr_tot = incr_tot, 
-                               incr_rba = incr_rba)
+                                      incr_tot = incr_tot, 
+                                      incr_rba = incr_rba)
           } # these are now our Ysamp[j] random cells
           incr_k <- bind_rows(incr_k)
         }else{ # IF DISCRETE
@@ -270,7 +251,7 @@ simError <- function(
         if(useMeanIVBA){   # if user wants to use the mean value
           est_ivb_DU <- meas_ivb %>% mean()
         }else{         # if user wants to use the 95% interval value of IVBA measurements
-          est_ivb_DU <- meas_ivb %>% upper95(lvl=.975) %>% fx(m=m, b=b)
+          est_ivb_DU <- meas_ivb %>% upper95(lvl=.975) #%>% fx(m=m, b=b)
         }
         
         est_rba_DU <- if(ivba_model & post_mean){
@@ -386,23 +367,14 @@ simError <- function(
                                     samp.prd_ba = samp.prd_ba)))
 }
 
-# upper 95% conf. int. of the mean function:
-upper95 <- function(x,lvl){
-  xbar = mean(x)
-  up95 = xbar + qnorm(lvl)*(sd(x)/sqrt(length(x)))
-  return(up95)
-}
 
-#####Custom lognormal#####
-# just a wrapper form the rlnorm that converts the normal mean and sd
-# inputs so that the output lognormal samples have the specified mean and sd
-# at the lognormal scale
 
-custom_rlnorm <- function(n, m, s){
-  location <- log(m^2 / sqrt(s^2 + m^2))
-  shape <- sqrt(log(1 + (s^2 / m^2)))
-  return(rlnorm(n=n, location, shape))
-}
+# test <- simError(tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05, sampmax = 50)
+# test2 <- simError(simChoice = "contaminant", tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, CoeV_RBA = 0.05, minFrcAct = .1, maxFrcAct = .5, numbins = 10)
+test3 <- simError(tot_n = 5, IVBA_n = 3, compositeTF = FALSE, Xaggr = 1,
+                  CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05,
+                  sampmax = 0, useMeanTot = T, error_tot = T, error_ivb = F,
+                  error_ivb_cv = 0.05, ivba_model = T, post_mean = F)
 
 #####Output text#####
 simText <- function(simResult){
@@ -545,7 +517,7 @@ precPlot <- function(simResult, plot.median = FALSE){
     geom_vline(xintercept = ba_mn, color = "red") +
     geom_vline(xintercept = actLvl.adj, color = "blue") +
     geom_hline(yintercept = 0, color = "black")
-
+  
   # for plotting
   plot.ctmax <- max(ggplot_build(outplot)$data[[1]]$count)
   plot.xmax <- max(ggplot_build(outplot)$data[[1]]$x)
@@ -573,13 +545,13 @@ precPlot <- function(simResult, plot.median = FALSE){
              size = 4,
              label = "Converted AL assuming 100% RBA", color = "blue",
              angle = 90)
-             # label = paste("Action level=", actLvl, " (assumed RBA=",
-             #               actLvlRBA,"%, ", actLvl.adj, " bioavailable)", sep = ""), color = "blue",
-             # angle = 90)
+  # label = paste("Action level=", actLvl, " (assumed RBA=",
+  #               actLvlRBA,"%, ", actLvl.adj, " bioavailable)", sep = ""), color = "blue",
+  # angle = 90)
   
   if(plot.median){
     outplot <- outplot +
-    geom_vline(xintercept = ba_md, color = "blue", lty = 2)
+      geom_vline(xintercept = ba_md, color = "blue", lty = 2)
   }
   return(outplot)
   
@@ -620,10 +592,3 @@ numericInputRow <- function(inputId, label, value = NULL, step = NULL, max = NUL
                  step = step, max = max, min = min,
                  class="input-small"))
 }
-
-# test <- simError(tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05, sampmax = 50)
-# test2 <- simError(simChoice = "contaminant", tot_n = 5, IVBA_n = 3, CoeV_tot = 0.5, CoeV_RBA = 0.05, minFrcAct = .1, maxFrcAct = .5, numbins = 10)
-# test3 <- simError(tot_n = 5, IVBA_n = 3, compositeTF = FALSE, Xaggr = 1,
-#                   CoeV_tot = 0.5, frcAct = 0.25, CoeV_RBA = 0.05,
-#                   sampmax = 0, useMeanTot = T, error_tot = T, error_ivb = T,
-#                   error_ivb_cv = 0.05, ivba_model = F, post_mean = T)

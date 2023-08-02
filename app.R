@@ -1,78 +1,147 @@
 library(shiny)
 library(shinyjs)
-source("app_functions_beta.R")
+library(cowplot)
+source("app_functions_4steps.R")
+source("gui_functions.R")
 
 #####App code#####
 ui <- fluidPage(
   useShinyjs(),
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
   titlePanel("Simulate error in bioavailability estimation"),
-  h4("Appendix A version adjust action RBA"),
-  helpText("This version makes explicit the RBA assumptions of the action level"),
-  helpText("This tool estimates Type 1 and 2 decision errors when incorporating RBA estimates into cleanup decisions for Pb or As contaminated soils, where Type 1 error is defined as concluding the DU does not need cleanup action when it should (false compliance), and Type 2 error is defined as concluding the DU needs cleanup action when it doesn't (false exceedance)."),
+  h4("Four step version"),
+  helpText("Associated manuscript"),
   helpText(div(style = "font-weight: normal; font-style: italic", "Updated Feb 18, 2023")),
 
   sidebarPanel(
     tabsetPanel(
       tabPanel(
-        title = "Input",
-        h4("Contaminant"),
-        radioButtons("AsPb", "Select contaminant", choices = c(Pb = "Pb", As = "As"), inline=TRUE),
-        numericInput("actLvl", 
-                     "Enter site-specific action level (mg/kg):", 
+        title = "Sample params",
+        h4("Step selection"),
+        selectInput("step", "Select step:", 
+                    choices = c(`Step 1` = "1", `Step 2` = "2", `Step 3` = "3", `Step 4` = "4")),
+        # radioButtons("AsPb", "Select contaminant", choices = c(Pb = "Pb", As = "As"), inline=TRUE),
+       
+        hr(),
+        h4("Action level"),
+        
+        numericInput("actLvl",
+                     "Enter site-specific action level (mg/kg):",
                      400, step = 10),
         numericInput("actLvlRBA",
                      "Assumed RBA of the action level (%):",
                      60, step = 10, min = 0, max = 100),
         hr(),
         h4("Sampling Protocol"),
-        radioButtons("compositeTF", "Sample aggregation", choices = c(Discrete = FALSE, Composite = TRUE)),
+        
+        # total concentration sample input
         conditionalPanel(
-          condition = "input.compositeTF == 'TRUE'",
-          numericInput("Xaggr", label = div(style = "font-weight: normal; font-style: italic", "*Increments per composite:"), 1, min = 2)),
-        numericInput("tot_n", "# of samples to be analyzed for total metal concentration", 5),
-        numericInput("IVBA_n", "# of samples to be analyzed for IVBA", 3),
+          condition = "input.step == 1 | input.step == 2",
+          numericInput("tot.n", "# of samples to be analyzed for total metal concentration", 5)
+        ),
+        
+        # composite total
+        radioButtons("comp_tot", "Sample aggregation (tot. conc.)", choices = c(Discrete = FALSE, Composite = TRUE), inline=TRUE),
+        conditionalPanel(
+          condition = "input.comp_tot == 'TRUE'",
+          numericInput("tot.incr", label = div(style = "font-weight: normal; font-style: italic", "*Increments per composite total sample:"), value=2, min = 2)),
+        
+        # IVBA sample input
+        conditionalPanel(
+          condition = "input.step == 1 | input.step == 2",
+          numericInput("ivba.n", "# of samples to be analyzed for IVBA", 3)
+        ),
+        
+        # composite IVBA
+        radioButtons("comp_ivba", "Sample aggregation (IVBA)", choices = c(Discrete = FALSE, Composite = TRUE), inline=TRUE),
+        conditionalPanel(
+          condition = "input.comp_ivba == 'TRUE'",
+          numericInput("ivba.incr", label = div(style = "font-weight: normal; font-style: italic", "*Increments per composite IVBA sample:"), value=2, min = 2)),
+        
+        # Mean of 95% conf. int.
         radioButtons("useMeanTot", "Base final bioavailable metal concentration calculation on:", 
                      choices = c(`Mean` = T, `Upper 95% CI of mean` = F)),
         # radioButtons("useMeanIVBA", "For IVBA, use the:", 
         #              choices = c(`Mean value` = T, `Upper 95% CI of mean` = F)),
+        
+        hr(),
+        
+        conditionalPanel(
+          condition = "input.step == 1",
+          h4("Step 1 Input"),
+          numericInput("sampmax", label = "Maximum number of samples to simulate:", value = 10, min = 2),
+          radioButtons("abs_frcAct", "Assumed level of soil contamination to simulate (expressed in terms of %)", 
+                       choices = c(`+/-25% action level` = 0.25, 
+                                   "Custom"), 
+                       selected = 0.25),
+          # conditional input if fraction above/below is custom
+          conditionalPanel(
+            condition = "input.abs_frcAct == 'Custom'",
+            numericInput("frcAct_custom", 
+                         label = div(style = "font-weight: normal; font-style: italic",
+                                     "*Custom value (%) (enter a neg. (-) value to run a Type 2 error simulation or pos. (+) value for Type 1 error simulation):"), 
+                         30, step = 1, min = -Inf, max = Inf))
+        ),
+        
+        conditionalPanel(
+          condition = "input.step == 2",
+          h4("Step 2 Input"),
+          HTML("<i>*Simulation range above/below action level:</i>"),
+          numericInput("minFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Minimum (%):"), value = 10, step = 10, min = 0),
+          numericInput("maxFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Maximum (%):"), value = 50, step = 10, min = 0),
+          numericInput("numbins", label = div(style = "font-weight: normal; font-style: italic", "Simulation intervals"), value = 10, min = 1)
+        ),
+        
+        conditionalPanel(
+          condition = "input.step == 3",
+          h4("Step 3 Input")
+        ),
+        
+        conditionalPanel(
+          condition = "input.step == 4",
+          h4("Step 4 Input")
+        ),
+        
+        conditionalPanel(
+          condition = "input.step == 3 | input.step == 4",
+          textInput("meas.tot", "Measured total conc. (mg/kg) (separated by commas)")
+        ),
+        conditionalPanel(
+          condition = "input.step == 3 | input.step == 4",
+          textInput("meas.ivba", "Measured IVBA (%) (separated by commas)")
+        ),
+        
         hr(),
         h4("Decision Unit Assumptions"),
-        radioButtons("frcAct", "Assumed level of soil contamination to simulate (expressed in terms of % below/above the action level)", 
-                     choices = c(`-25% (Type 2 error simulation)` = -0.25, 
-                                 `+25% (Type 1 error simulation)` = 0.25, 
-                                 "Custom"), 
-                     selected = 0.25),
-        # conditional input if fraction above/below is custom
-        conditionalPanel(
-          condition = "input.frcAct == 'Custom'",
-          numericInput("frcAct_custom", 
-                       label = div(style = "font-weight: normal; font-style: italic",
-                                   "*Custom value (%) (enter a neg. (-) value to run a Type 2 error simulation or pos. (+) value for Type 1 error simulation):"), 
-                       30, step = 1, min = -Inf, max = Inf)),
-        selectInput("totdist", "Total metal concentration data distribution:", 
+
+        selectInput("dist_tot", "Total metal concentration data distribution:", 
                     choices = c(`log-normal` = "lognorm", normal = "normal")),
-        radioButtons("CoeV_tot", "Total metal concentration coefficient of variance (CoV):", 
+        radioButtons("coeV.tot", "Total metal concentration coefficient of variance (CoV):", 
                      choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
         # conditional input if metal CoV is custom
         conditionalPanel(
-          condition = "input.CoeV_tot == 'Custom'",
-          numericInput("CoeV_tot_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom metal CoV value:"), 0.75, step = 0.05, min = 0)),
-        selectInput("rbadist", "RBA data distribution:",
+          condition = "input.coeV.tot == 'Custom'",
+          numericInput("coeV.tot_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom metal CoV value:"), 0.75, step = 0.05, min = 0)),
+        selectInput("dist_rba", "RBA data distribution:",
                     choices = c(normal = "normal", uniform = "uniform", `log-normal` = "lognorm")),
-        radioButtons("CoeV_RBA", "RBA CoV:", 
+        radioButtons("coeV.rba", "RBA CoV:", 
                      choices = c(0.05, 0.15, 0.30, "Custom"), inline=TRUE),
         # conditional input if RBA CoV is custom
         conditionalPanel(
-          condition = "input.CoeV_RBA == 'Custom'",
-          numericInput("CoeV_RBA_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom RBA CoV value:"), 0.10, step = 0.05, min = 0)),
-        radioButtons("RBAmean", "RBA mean:", 
+          condition = "input.coeV.rba == 'Custom'",
+          numericInput("coeV.rba_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom RBA CoV value:"), 0.10, step = 0.05, min = 0)),
+        radioButtons("mn.rba", "RBA mean:", 
                      choices = c(`60%` = 60, "Custom"), inline=TRUE),
         # conditional input if assumed mean RBA is custom
         conditionalPanel(
-          condition = "input.RBAmean == 'Custom'",
-          numericInput("RBAmean_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom mean RBA value (%):"), 50, step = 5, min = 0)),
+          condition = "input.rba.mn == 'Custom'",
+          numericInput("mn.rba_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom mean RBA value (%):"), 50, step = 5, min = 0)),
         hr(),
+        
+        actionButton(inputId = "go", label = "Run simulation")
+      ),
+      tabPanel(
+        title = "Sim. params",
         h4("Simulation Parameters"),
         selectInput("error_tot", "Simulate measurement error for total concentration", choices = c(TRUE, FALSE)),
         selectInput("error_ivb", "Simulate measurement error for IVBA", choices = c(TRUE, FALSE)),
@@ -90,32 +159,7 @@ ui <- fluidPage(
                       choices = c(TRUE, FALSE), selected = FALSE)
         ),
         numericInput("iter", "Number of simulations", step = 1000, min = 100, value = 5000),
-        hr(),
-        h4("Optional Advanced Tool-Automated Analyses"),
-        selectInput("simChoice", "Select advanced analysis type", 
-                    choices = c(`None` = "none", `Vary sample size` = "sample", `Vary contaminant level` = "contaminant")),
-        conditionalPanel(
-          condition = "input.simChoice == 'sample'",
-          numericInput("sampmax", label = div(style = "font-weight: normal; font-style: italic", "*Maximum number of samples to simulate:"), value = 10, min = 2)
-        ),
-        conditionalPanel(
-          condition = "input.simChoice == 'contaminant'",
-          HTML("<i>*Simulation range above/below action level:</i>"),
-          numericInput("minFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Minimum (%):"), value = 10, step = 10, min = 0),
-          numericInput("maxFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Maximum (%):"), value = 50, step = 10, min = 0),
-          numericInput("numbins", label = div(style = "font-weight: normal; font-style: italic", "Simulation intervals"), value = 10, min = 1)
-        ),
-        br(),
-        
-        actionButton(inputId = "go", label = "Run simulation")
       ),
-      tabPanel("Readme",
-               h4("Readme manual (.pdf format)"),
-               br(),
-               actionButton(inputId = 'readme',
-                            label = "Download",
-                            onclick = "window.open('readme.pdf', '_blank')")
-      )
     )
   ),
   
@@ -124,22 +168,13 @@ ui <- fluidPage(
       id = "resultsTabs",
       type = "tabs",
       tabPanel("Error Results",
-               h3(textOutput("resultTitle")),
+               # h3(textOutput("resultTitle")),
                br(),
-               htmlOutput("errorText"),
-               tags$head(tags$style("#errorText{
-                                 font-size: 20px;
-                                 }"))
+               plotOutput("errorSimPlot")
+               # tags$head(tags$style("#errorText{
+               #                   font-size: 20px;
+               #                   }"))
                ),
-      tabPanel("Precision",
-               h4(textOutput("precisionTitle")),
-               plotOutput("errorPrec")
-               ),
-      tabPanel("Tool-Automated Analysis Results",
-               h4(textOutput("SampleSimTitle")),
-               plotOutput("errorSimPlot"),
-               textOutput("errorSimWarn")
-      ),
       tabPanel(
         title = "Download",
         h4("Simulation values"),
@@ -159,30 +194,40 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session){
-  frcAct <- reactive({
-    ifelse(input$frcAct=="Custom", 
+  abs_frcAct <- reactive({
+    ifelse(input$abs_frcAct=="Custom", 
            input$frcAct_custom/100, 
-           as.numeric(input$frcAct))
+           as.numeric(input$abs_frcAct))
   })
-  CoeV_tot <- reactive({
-    ifelse(input$CoeV_tot=="Custom", 
-           input$CoeV_tot_custom, 
-           as.numeric(input$CoeV_tot))
+  coeV.tot <- reactive({
+    ifelse(input$coeV.tot=="Custom", 
+           input$coeV.tot_custom, 
+           as.numeric(input$coeV.tot))
   })
-  CoeV_RBA <- reactive({
-    ifelse(input$CoeV_RBA=="Custom", 
-           input$CoeV_RBA_custom, 
-           as.numeric(input$CoeV_RBA))
+  coeV.rba <- reactive({
+    ifelse(input$coeV.rba=="Custom", 
+           input$coeV.rba_custom, 
+           as.numeric(input$coeV.rba))
   })
-  RBAmean <- reactive({
-    ifelse(input$RBAmean=="Custom", 
-           input$RBAmean_custom, 
-           as.numeric(input$RBAmean))
+  mn.rba <- reactive({
+    ifelse(input$mn.rba=="Custom", 
+           input$mn.rba_custom, 
+           as.numeric(input$mn.rba))
   })
   observe({
-    comp.choice = input$compositeTF
-    if(comp.choice==FALSE){
-      updateNumericInput(session, "Xaggr", value = 1)
+    comptot.choice = input$comp_tot
+    if(comptot.choice==FALSE){
+      updateNumericInput(session, "tot.incr", value = 1)
+    }else{
+      updateNumericInput(session, "tot.incr", value = 2)
+    }
+  })
+  observe({
+    compivba.choice = input$comp_ivba
+    if(compivba.choice==FALSE){
+      updateNumericInput(session, "ivba.incr", value = 1)
+    }else{
+      updateNumericInput(session, "ivba.incr", value = 2)
     }
   })
   observe({
@@ -194,25 +239,24 @@ server <- function(input, output, session){
   
   # when simulate button is pressed
   simResult <- eventReactive(input$go,{
-    if(input$simChoice == "sample"){
+    if(input$step == 1){
       withProgress(
         message = "Running simulations", value = 0,{
-          incProgress(1/2, detail = "Varying sample number")
-          type1 <- simError(
-            simChoice = "sample",
-            AsPb = input$AsPb,
+          incProgress(1/3, detail = "Simulating type I error")
+          type1 <- step1(
+            AsPb = "Pb",  # restrict to Pb for manuscript
             actLvl = input$actLvl,
             actLvlRBA = input$actLvlRBA,
-            tot_n = as.numeric(input$tot_n),
-            IVBA_n = as.numeric(input$IVBA_n),
-            compositeTF = as.logical(input$compositeTF),
-            Xaggr = input$Xaggr,
+            tot.n = as.numeric(input$tot.n),
+            ivba.n = as.numeric(input$ivba.n),
+            tot.incr = as.numeric(input$tot.incr),
+            ivba.incr = as.numeric(input$ivba.incr),
             useMeanTot = as.logical(input$useMeanTot),
             useMeanIVBA = TRUE,
-            frcAct = frcAct(),
-            CoeV_tot = CoeV_tot(),
-            CoeV_RBA = CoeV_RBA(),
-            RBAmean = RBAmean(),
+            frcAct = abs_frcAct(),
+            coeV.tot = coeV.tot(),
+            coeV.rba = coeV.rba(),
+            mn.rba = mn.rba(),
             error_tot = as.logical(input$error_tot),
             error_ivb = as.logical(input$error_ivb),
             error_ivb_cv = as.numeric(input$error_ivb_cv),
@@ -220,114 +264,74 @@ server <- function(input, output, session){
             post_mean = as.logical(input$post_mean),
             iter = input$iter,
             sampmax = input$sampmax,
-            dist_tot = input$totdist,
-            dist_RBA = input$rbadist
+            dist_tot = input$dist_tot,
+            dist_rba = input$dist_rba
           )
-          list(type1)
-        }
-      )
-    }else if(input$simChoice == "contaminant"){
-      withProgress(
-        message = "Running simulations", value = 0,{
-          incProgress(1/2, detail = "Varying contaminant level")
-          type1 <- simError(
-            simChoice = "contaminant",
-            AsPb = input$AsPb,
+          incProgress(1/3, detail = "Simulating type II error")
+          type2 <- step1(
+            AsPb = "Pb",  # restrict to Pb for manuscript
             actLvl = input$actLvl,
             actLvlRBA = input$actLvlRBA,
-            tot_n = as.numeric(input$tot_n),
-            IVBA_n = as.numeric(input$IVBA_n),
-            compositeTF = as.logical(input$compositeTF),
-            Xaggr = input$Xaggr,
+            tot.n = as.numeric(input$tot.n),
+            ivba.n = as.numeric(input$ivba.n),
+            tot.incr = as.numeric(input$tot.incr),
+            ivba.incr = as.numeric(input$ivba.incr),
             useMeanTot = as.logical(input$useMeanTot),
             useMeanIVBA = TRUE,
-            frcAct = frcAct(),
-            minFrcAct = ifelse(frcAct()>0,input$minFrcAct,-input$maxFrcAct)/100,
-            maxFrcAct = ifelse(frcAct()>0,input$maxFrcAct,-input$minFrcAct)/100,
-            CoeV_tot = CoeV_tot(),
-            CoeV_RBA = CoeV_RBA(),
-            RBAmean = RBAmean(),
+            frcAct = -abs_frcAct(),
+            coeV.tot = coeV.tot(),
+            coeV.rba = coeV.rba(),
+            mn.rba = mn.rba(),
             error_tot = as.logical(input$error_tot),
             error_ivb = as.logical(input$error_ivb),
             error_ivb_cv = as.numeric(input$error_ivb_cv),
             ivba_model = as.logical(input$ivba_model),
             post_mean = as.logical(input$post_mean),
             iter = input$iter,
-            numbins = input$numbins,
-            dist_tot = input$totdist,
-            dist_RBA = input$rbadist
+            sampmax = input$sampmax,
+            dist_tot = input$dist_tot,
+            dist_rba = input$dist_rba
           )
-          
-          list(type1)
-        }
-      )
-    }else{
-      withProgress(
-        message = "Running simulations", value = 0,{
-          incProgress(1/2, detail = "No advanced simulations selected")
-          type1 <- simError(
-            simChoice = "sample",
-            AsPb = input$AsPb,
-            actLvl = input$actLvl,
-            actLvlRBA = input$actLvlRBA,
-            tot_n = as.numeric(input$tot_n),
-            IVBA_n = as.numeric(input$IVBA_n),
-            compositeTF = as.logical(input$compositeTF),
-            Xaggr = input$Xaggr,
-            useMeanTot = as.logical(input$useMeanTot),
-            useMeanIVBA = TRUE,
-            frcAct = frcAct(),
-            CoeV_tot = CoeV_tot(),
-            CoeV_RBA = CoeV_RBA(),
-            RBAmean = RBAmean(),
-            error_tot = as.logical(input$error_tot),
-            error_ivb = as.logical(input$error_ivb),
-            error_ivb_cv = as.numeric(input$error_ivb_cv),
-            ivba_model = as.logical(input$ivba_model),
-            post_mean = as.logical(input$post_mean),
-            iter = input$iter,
-            sampmax = 0,
-            dist_tot = input$totdist,
-            dist_RBA = input$rbadist
-          )
-          list(type1)
+          list(type1=type1, type2=type2)
         }
       )
     }
     
-  })
+  }
+  ) # eventReactive
 
   
   onclick("go", runjs("window.scrollTo(0, 50)"))  # go back to top of window
   
   # outputs: display
   output$errorSimPlot <- renderPlot({
-    if(input$simChoice == "sample"){
-      simPlot(simResult()[[1]])
-    }else if(input$simChoice == "contaminant"){
-      simPlot2(simResult()[[1]])
+    if(input$step == 1){
+      s1_t1 <- step1_plot(simResult()$type1)
+      s1_t2 <- step1_plot(simResult()$type2)
+      
+      plot_grid(s1_t1, s1_t2)
     }
     })
-  output$errorText <- renderUI({HTML(simText(simResult()[[1]]))})
-  output$errorSimWarn <- renderText({
-    validate(
-      need(simResult()[[1]]$sim_attributes$simWarnings, NULL)
-    )
-    paste0(simResult()[[1]]$sim_attributes$simWarnings, collapse = " ")
-    })
-  output$SampleSimTitle <- renderText({
-    if(input$simChoice == "none"){
-      "No advanced simulations selected"
-    }else{
-      simTabTitle(simResult()[[1]])
-    }
-  })
-  output$precisionTitle <- renderText({
-    precisionTabTitle(simResult()[[1]])
-  })
-  output$resultTitle <- renderText({
-    resultTabTitle(simResult()[[1]])
-  })
+  # output$errorText <- renderUI({HTML(simText(simResult()[[1]]))})
+  # output$errorSimWarn <- renderText({
+  #   validate(
+  #     need(simResult()[[1]]$sim_attributes$simWarnings, NULL)
+  #   )
+  #   paste0(simResult()[[1]]$sim_attributes$simWarnings, collapse = " ")
+  #   })
+  # output$SampleSimTitle <- renderText({
+  #   if(input$simChoice == "none"){
+  #     "No advanced simulations selected"
+  #   }else{
+  #     simTabTitle(simResult()[[1]])
+  #   }
+  # })
+  # output$precisionTitle <- renderText({
+  #   precisionTabTitle(simResult()[[1]])
+  # })
+  # output$resultTitle <- renderText({
+  #   resultTabTitle(simResult()[[1]])
+  # })
 
   # output$finalText <- renderUI({
   #   if(input$simChoice == "sample"){
@@ -339,45 +343,45 @@ server <- function(input, output, session){
     
   
   # precision output
-  output$errorPrec <- renderPlot({precPlot(simResult()[[1]])})
+  # output$errorPrec <- renderPlot({precPlot(simResult()[[1]])})
   
   # outputs: download data
-  output$downDU <- downloadHandler(
-    filename = function(){"DUsamples.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[1]]$sim_attributes$samp.DUsample, fname, row.names = FALSE)
-    }
-  )
-  output$downprd_BA <- downloadHandler(
-    filename = function(){"prdBA.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[1]]$sim_attributes$samp.prd_ba, fname, row.names = FALSE)
-    }
-  )
-  output$downall <- downloadHandler(
-    filename = function(){"all.rds"}, 
-    content = function(fname){
-      saveRDS(simResult()[[1]], fname)
-    }
-  )
-  output$plotData <- downloadHandler(
-    filename = function(){"plotData.csv"}, 
-    content = function(fname){
-      write.csv(extractPlotData(simResult()[[1]])[[1]], fname, row.names = FALSE)
-    }
-  )
-  output$plotMetadata <- downloadHandler(
-    filename = function(){"plotMetadata.csv"}, 
-    content = function(fname){
-      write.csv(extractPlotData(simResult()[[1]])[[2]], fname, row.names = FALSE)
-    }
-  )
-  output$downincr <- downloadHandler(
-    filename = function(){"raw_incr.csv"}, 
-    content = function(fname){
-      write.csv(simResult()[[1]]$sim_attributes$samp.increments, fname, row.names = FALSE)
-    }
-  )
+  # output$downDU <- downloadHandler(
+  #   filename = function(){"DUsamples.csv"}, 
+  #   content = function(fname){
+  #     write.csv(simResult()[[1]]$sim_attributes$samp.DUsample, fname, row.names = FALSE)
+  #   }
+  # )
+  # output$downprd_BA <- downloadHandler(
+  #   filename = function(){"prdBA.csv"}, 
+  #   content = function(fname){
+  #     write.csv(simResult()[[1]]$sim_attributes$samp.prd_ba, fname, row.names = FALSE)
+  #   }
+  # )
+  # output$downall <- downloadHandler(
+  #   filename = function(){"all.rds"}, 
+  #   content = function(fname){
+  #     saveRDS(simResult()[[1]], fname)
+  #   }
+  # )
+  # output$plotData <- downloadHandler(
+  #   filename = function(){"plotData.csv"}, 
+  #   content = function(fname){
+  #     write.csv(extractPlotData(simResult()[[1]])[[1]], fname, row.names = FALSE)
+  #   }
+  # )
+  # output$plotMetadata <- downloadHandler(
+  #   filename = function(){"plotMetadata.csv"}, 
+  #   content = function(fname){
+  #     write.csv(extractPlotData(simResult()[[1]])[[2]], fname, row.names = FALSE)
+  #   }
+  # )
+  # output$downincr <- downloadHandler(
+  #   filename = function(){"raw_incr.csv"}, 
+  #   content = function(fname){
+  #     write.csv(simResult()[[1]]$sim_attributes$samp.increments, fname, row.names = FALSE)
+  #   }
+  # )
 }
 
 shinyApp(ui = ui, server = server)
