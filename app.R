@@ -1,8 +1,7 @@
-library(shiny)
-library(shinyjs)
-library(cowplot)
 source("app_functions_4steps.R")
 source("gui_functions.R")
+
+using("shiny", "shinyjs", "cowplot", "ggplot2", "truncnorm", "dplyr")
 
 ##### Input GUI #####
 ui <- fluidPage(

@@ -1,5 +1,14 @@
-library(ggplot2)
-library(egg)
+# package checking and installation
+# from: https://stackoverflow.com/questions/4090169/elegant-way-to-check-for-missing-packages-and-install-them
+using<-function(...) {
+  libs<-unlist(list(...))
+  req<-unlist(lapply(libs,require,character.only=TRUE))
+  need<-libs[req==FALSE]
+  if(length(need)>0){ 
+    install.packages(need)
+    lapply(need,require,character.only=TRUE)
+  }
+}
 
 step1_plot <- function(step1.output){
   frcAct <- step1.output$step1$frcAct[1]
