@@ -15,5 +15,24 @@ step1_plot <- function(step1.output){
                   ifelse(frcAct>0, "above", "below"), 
                   " action level",
                   sep = ""),) + 
+    ylim(c(0,100)) +
+    theme_bw()
+}
+
+
+step2_plot <- function(step2.output){
+  errortype <- ifelse(median(step2.output$step2$frcAct) > 0, "Type 1", "Type 2")
+  
+  ggplot(step2.output$step2, aes(x = 100*frcAct, y = err_pb*100)) + 
+    geom_line() + geom_point() + 
+    ylab(paste("Probability of", errortype, "error", sep = " ")) +
+    xlab(paste("% ", ifelse(errortype == "Type 1", "above", "below"), " action level", sep = "")) +
+    geom_hline(yintercept = ifelse(errortype == "Type 1", 5, 20), color = "red") + 
+    ggtitle(
+      paste(errortype, " error with ", ifelse(errortype=="Type 1", "increasing", "decreasing"),
+            "\nbioavailable ", step2.output$AsPb,
+            ifelse(errortype=="Type 1", " above", " below"), " the action level",
+                  sep = ""),) + 
+    ylim(c(0,100)) +
     theme_bw()
 }

@@ -4,7 +4,7 @@ library(cowplot)
 source("app_functions_4steps.R")
 source("gui_functions.R")
 
-#####App code#####
+##### Input GUI #####
 ui <- fluidPage(
   useShinyjs(),
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
@@ -66,6 +66,7 @@ ui <- fluidPage(
         
         hr(),
         
+        ##### Step 1 GUI #####
         conditionalPanel(
           condition = "input.step == 1",
           h4("Step 1 Input"),
@@ -83,20 +84,23 @@ ui <- fluidPage(
                          30, step = 1, min = -Inf, max = Inf))
         ),
         
+        ##### Step 2 GUI #####
         conditionalPanel(
           condition = "input.step == 2",
           h4("Step 2 Input"),
           HTML("<i>*Simulation range above/below action level:</i>"),
-          numericInput("minFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Minimum (%):"), value = 10, step = 10, min = 0),
+          numericInput("minFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Minimum (%):"), value = 0, step = 10, min = 0),
           numericInput("maxFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Maximum (%):"), value = 50, step = 10, min = 0),
           numericInput("numbins", label = div(style = "font-weight: normal; font-style: italic", "Simulation intervals"), value = 10, min = 1)
         ),
         
+        ##### Step 3 GUI #####
         conditionalPanel(
           condition = "input.step == 3",
           h4("Step 3 Input")
         ),
         
+        ##### Step 4 GUI #####
         conditionalPanel(
           condition = "input.step == 4",
           h4("Step 4 Input")
@@ -170,10 +174,13 @@ ui <- fluidPage(
       tabPanel("Error Results",
                # h3(textOutput("resultTitle")),
                br(),
-               plotOutput("errorSimPlot")
-               # tags$head(tags$style("#errorText{
-               #                   font-size: 20px;
-               #                   }"))
+               conditionalPanel(condition = "input.step != 3 | input.step == 4", 
+                                tableOutput("simTable")
+               ),
+               conditionalPanel(condition = "input.step == 1 | input.step == 2",
+                                plotOutput("errorSimPlot")
+                                )
+
                ),
       tabPanel(
         title = "Download",
@@ -193,6 +200,7 @@ ui <- fluidPage(
 
 )
 
+##### Server #####
 server <- function(input, output, session){
   abs_frcAct <- reactive({
     ifelse(input$abs_frcAct=="Custom", 
@@ -238,11 +246,14 @@ server <- function(input, output, session){
   })
   
   # when simulate button is pressed
-  simResult <- eventReactive(input$go,{
+  simResult <- eventReactive(input$go, {
+
     if(input$step == 1){
+      ##### Step 1 #####
       withProgress(
-        message = "Running simulations", value = 0,{
+        message = "Running step 1 simulations", value = 0,{
           incProgress(1/3, detail = "Simulating type I error")
+          
           type1 <- step1(
             AsPb = "Pb",  # restrict to Pb for manuscript
             actLvl = input$actLvl,
@@ -295,8 +306,89 @@ server <- function(input, output, session){
           list(type1=type1, type2=type2)
         }
       )
+    }else if(input$step == 2){
+      ##### Step 2 #####
+      withProgress(
+        message = "Running step 2 simulations", value = 0,{
+          incProgress(1/3, detail = "Simulating type I error")
+          type1 <- step2(
+            AsPb = "Pb",  # restrict to Pb for manuscript
+            actLvl = input$actLvl,
+            actLvlRBA = input$actLvlRBA,
+            tot.n = as.numeric(input$tot.n),
+            ivba.n = as.numeric(input$ivba.n),
+            tot.incr = as.numeric(input$tot.incr),
+            ivba.incr = as.numeric(input$ivba.incr),
+            useMeanTot = as.logical(input$useMeanTot),
+            useMeanIVBA = TRUE,
+            coeV.tot = coeV.tot(),
+            coeV.rba = coeV.rba(),
+            mn.rba = mn.rba(),
+            error_tot = as.logical(input$error_tot),
+            error_ivb = as.logical(input$error_ivb),
+            error_ivb_cv = as.numeric(input$error_ivb_cv),
+            ivba_model = as.logical(input$ivba_model),
+            post_mean = as.logical(input$post_mean),
+            iter = input$iter,
+            minFrcAct = input$minFrcAct/100,  # minimum fraction of action level to simulate
+            maxFrcAct = input$maxFrcAct/100,  # maximum fraction of action level to simulate
+            numbins = input$numbins,      # nr. divisions over range of contaminant levels
+            dist_tot = input$dist_tot,
+            dist_rba = input$dist_rba
+          )
+          incProgress(1/3, detail = "Simulating type II error")
+          type2 <- step2(
+            AsPb = "Pb",  # restrict to Pb for manuscript
+            actLvl = input$actLvl,
+            actLvlRBA = input$actLvlRBA,
+            tot.n = as.numeric(input$tot.n),
+            ivba.n = as.numeric(input$ivba.n),
+            tot.incr = as.numeric(input$tot.incr),
+            ivba.incr = as.numeric(input$ivba.incr),
+            useMeanTot = as.logical(input$useMeanTot),
+            useMeanIVBA = TRUE,
+            coeV.tot = coeV.tot(),
+            coeV.rba = coeV.rba(),
+            mn.rba = mn.rba(),
+            error_tot = as.logical(input$error_tot),
+            error_ivb = as.logical(input$error_ivb),
+            error_ivb_cv = as.numeric(input$error_ivb_cv),
+            ivba_model = as.logical(input$ivba_model),
+            post_mean = as.logical(input$post_mean),
+            iter = input$iter,
+            minFrcAct = -input$minFrcAct/100,  # minimum fraction of action level to simulate
+            maxFrcAct = -input$maxFrcAct/100,  # maximum fraction of action level to simulate
+            numbins = input$numbins,      # nr. divisions over range of contaminant levels            dist_tot = input$dist_tot,
+            dist_rba = input$dist_rba
+          )
+          list(type1=type1, type2=type2)
+        }
+      )
+    }else if(input$step == 3){
+      ##### Step 3 #####
+      withProgress(
+        message = "Running step 2 simulations", value = 0,{
+          meas.tot <- as.numeric(strsplit(input$meas.tot, split = ",")[[1]])
+          meas.ivba <- as.numeric(strsplit(input$meas.ivba, split = ',')[[1]])
+          validate(
+            need(all(!is.na(meas.tot)), "Please only use numeric values separated by commas for total concentration input"),
+            need(all(!is.na(meas.ivba)), "Please only use numeric values separated by commas for measured IVBA input")
+          )
+          
+          incProgress(1/2, detail = "Simulating")
+          step3result <- step3(
+            meas.tot = meas.tot,      # actual total concentration measurements
+            meas.ivba = meas.ivba,     # actual ivba measurements
+            AsPb = "Pb",  # restrict to Pb for manuscript
+            actLvl = input$actLvl,
+            actLvlRBA = input$actLvlRBA,
+            tot.incr = as.numeric(input$tot.incr),
+            ivba.incr = as.numeric(input$ivba.incr)
+          )
+          return(step3result)
+        }
+      )
     }
-    
   }
   ) # eventReactive
 
@@ -310,8 +402,28 @@ server <- function(input, output, session){
       s1_t2 <- step1_plot(simResult()$type2)
       
       plot_grid(s1_t1, s1_t2)
+    }else if(input$step == 2){
+      s2_t1 <- step2_plot(simResult()$type1)
+      s2_t2 <- step2_plot(simResult()$type2)
+      
+      plot_grid(s2_t1, s2_t2)
     }
     })
+  output$simTable <- renderTable({
+    if(input$step > 2){
+      data.frame(`Model input` = c("Assumed true EPC (relative to the AL)",
+                                   "CoV in total Pb across the DU ",
+                                   "CoV in % RBA across the DU",
+                                   "Estimated mean % RBA"),
+                 `Value inferred post-sampling based on sampling results` =
+                   c(simResult()$meas.frcAct,
+                     simResult()$coeV.tot,
+                     simResult()$coeV.rba,
+                     simResult()$mn.rba),
+                 check.names = FALSE
+                 )
+    }
+  })
   # output$errorText <- renderUI({HTML(simText(simResult()[[1]]))})
   # output$errorSimWarn <- renderText({
   #   validate(

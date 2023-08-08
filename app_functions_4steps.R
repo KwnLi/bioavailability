@@ -365,6 +365,7 @@ step1 <- function(
 # Vary the contaminant level
 
 step2 <- function(
+    AsPb = NULL,       # define contaminant
     tot.n = NULL,      # number of total conc. samples, passed to simDU
     ivba.n = NULL,     # number of ivba samples, passed to simDU
     minFrcAct = NULL,  # minimum fraction of action level to simulate
@@ -391,19 +392,20 @@ step2 <- function(
     print(paste("Simulating", 100*abs(frcActRange[i]), "%",
                 ifelse(frcActRange[i]<0,"below","above"),
                 "the action level", sep = " "))
-    
     step2.out[[i]] <- simDU(
+      AsPb = AsPb,
       tot.n = tot.n,
       ivba.n = ivba.n,
       frcAct = frcActRange[i],
       outputLvl = 1,
       ...
-    )
+    )$err_pb
   }
-  return(bind_rows(step2.out))
+  return(list(step2 = bind_rows(step2.out), AsPb = AsPb))
 }
 
 # test.step2 <- step2(
+#   AsPb = "Pb",
 #   tot.n = 5,
 #   tot.incr = 10,
 #   ivba.n = 3,
@@ -469,7 +471,7 @@ step3 <- function(
   return(step3.out)
 }
 
-# step3(c(340,580,209,300,333), meas.ivba = c(78,76,45),
+# test = step3(c(340,580,209,300,333), meas.ivba = c(78,76,45),
 #       tot.incr = 5, ivba.incr = 5,
 #       "Pb")
 
