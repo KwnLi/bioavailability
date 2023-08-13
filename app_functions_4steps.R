@@ -338,6 +338,7 @@ step1 <- function(
     tot.n = NULL,      # number of total conc. samples, passed to simDU
     ivba.n = NULL,     # number of ivba samples, passed to simDU
     sampmax = NULL,    # maximum number of samples to simulate, default 10*tot.n
+    incr.vec = NULL,   # vector of increments to test
     ...                # simDU parameters
 ){
   sampout <- length(seq(max(c(tot.n, ivba.n)), sampmax, by=1))
@@ -345,28 +346,35 @@ step1 <- function(
   ivba.range <- seq(ivba.n, by=1, length.out = sampout)
   
   step1.out <- list()
-  for(i in 1:sampout){
-    # progress message
-    print(paste("Simulating", tot.range[i], "total concentration samples and", 
-                ivba.range[i], "IVBA samples", sep = " "))
-    
-    step1.out[[i]] <- simDU(
-      AsPb = AsPb,
-      tot.n = tot.range[i],
-      ivba.n = ivba.range[i],
-      outputLvl = 1,
-      ...
-    )$err_pb
+  
+  for(h in 1:length(incr.vec)){
+    step1.h <- list()
+    for(i in 1:sampout){
+      # progress message
+      print(paste("Simulating", tot.range[i], "total concentration samples and", 
+                  ivba.range[i], "IVBA samples, with", incr.vec[h], "increments", sep = " "))
+      
+      step1.h[[i]] <- simDU(
+        AsPb = AsPb,
+        tot.n = tot.range[i],
+        ivba.n = ivba.range[i],
+        outputLvl = 1,
+        tot.incr = incr.vec[h],
+        ivba.incr = incr.vec[h],
+        ...
+      )$err_pb
+    }
+    step1.out[[h]] <- bind_rows(step1.h) %>% mutate(n_incr = incr.vec[h])
   }
+  
+
   return(list(step1 = bind_rows(step1.out), AsPb = AsPb))
 }
 
 # test.step1 <- step1(
 #   AsPb = "Pb",
 #   tot.n = 5,
-#   tot.incr = 10,
 #   ivba.n = 3,
-#   ivba.incr = 10,
 #   sampmax = 50,
 #   frcAct = -0.25,
 #   coeV.tot = 0.5,
@@ -374,7 +382,8 @@ step1 <- function(
 #   error_tot = TRUE,
 #   error_ivb = TRUE,
 #   error_ivb_cv = 0.05,
-#   ivba_model = TRUE
+#   ivba_model = TRUE, 
+#   incr.vec = c(1,5,10)
 # )
 
 ##### Step 2 #####
@@ -448,6 +457,9 @@ step3 <- function(
     tot.incr = NULL,      # number of increments for total conc. samples
     ivba.incr = NULL,     # number of increments for ivb samples
     
+    # Use mean of upper 95% interval in estimation of total contaminant?
+    useMeanTot = T,       # T = use the mean; F = use 95% interval
+    
     # What is the site-specific soil contaminant action level?
     actLvl = 400,       # mg/kg  (action level: limit of biovalability above which site has to be remedied)
     actLvlRBA = 60      # % RBA assumed in the action level
@@ -458,7 +470,7 @@ step3 <- function(
   tot.n <- length(meas.tot)
   rba.n <- length(meas.rba)
   
-  mn.tot <- mean(meas.tot)
+  mn.tot <- ifelse(useMeanTot, mean(meas.tot), upper95(meas.tot))
   mn.rba <- mean(meas.rba)
   
   # coefficient of variation
@@ -498,11 +510,12 @@ testcv <- function(x, incr){    # function returns incremented x by taking means
   return(rowMeans(x.mat))
 }
 
-# step3(testcv(rnorm(n = 10000, mean = 300, sd = 20),10), meas.ivba = c(78,76,45),
-#       tot.incr = 10, ivba.incr = 1, "Pb") # simulates increments of 10
-# 
-# step3(rnorm(n = 100000, mean = 300, sd = 20), meas.ivba = c(78,76,45),
-#       tot.incr = 1, ivba.incr = 1, "Pb")
+step3(testcv(rnorm(n = 10000, mean = 300, sd = 20),100), 
+      meas.ivba = testcv(rnorm(n = 10000, mean = 75, sd = 5),100),
+      tot.incr = 100, ivba.incr = 100, "Pb") # simulates increments of 10
+
+step3(rnorm(n = 100000, mean = 300, sd = 20), meas.ivba = c(78,76,45),
+      tot.incr = 1, ivba.incr = 1, "Pb")
 
 # as effective number of "cores" increases (i.e., base unit of sampling whether composited or not), e
 # estimated coeV gets closer to the original inputted coeV (sd=20, mn = 300)
@@ -519,6 +532,9 @@ step4 <- function(
     tot.incr = NULL,      # number of increments for total conc. samples
     ivba.incr = NULL,     # number of increments for ivb samples
     
+    # Use mean of upper 95% interval in estimation of total contaminant?
+    useMeanTot = T,       # T = use the mean; F = use 95% interval
+    
     # What is the site-specific soil contaminant action level?
     actLvl = 400,       # mg/kg  (action level: limit of biovalability above which site has to be remedied)
     actLvlRBA = 60,     # % RBA assumed in the action level
@@ -532,7 +548,8 @@ step4 <- function(
                            tot.incr = tot.incr,
                            ivba.incr = ivba.incr,
                            actLvl = actLvl,
-                           actLvlRBA = actLvlRBA)
+                           actLvlRBA = actLvlRBA,
+                           useMeanTot = useMeanTot)
   
   accuracy.sim <- simDU(
     AsPb = AsPb, actLvl = actLvl, actLvlRBA = actLvlRBA,
@@ -542,6 +559,7 @@ step4 <- function(
     coeV.tot = meas.dist.param$coeV.tot,
     coeV.rba = meas.dist.param$coeV.rba,
     mn.rba = meas.dist.param$mn.rba,
+    useMeanTot = useMeanTot,
     outputLvl = 2,
     ...
   )
@@ -554,6 +572,7 @@ step4 <- function(
     coeV.tot = meas.dist.param$coeV.tot,
     coeV.rba = meas.dist.param$coeV.rba,
     mn.rba = meas.dist.param$mn.rba,
+    useMeanTot = useMeanTot,
     outputLvl = 2,
     ...
   )
@@ -561,5 +580,5 @@ step4 <- function(
   return(list(accuracy.sim = accuracy.sim, precision.sim = precision.sim, step3 = meas.dist.param))
 }
 
-# step4(testcv(rnorm(n = 100, mean = 300, sd = 20),10), meas.ivba = c(78,76,45),
-#       tot.incr = 10, ivba.incr = 1, "Pb")
+# teststep4 <- step4(testcv(rnorm(n = 100, mean = 300, sd = 20),10), meas.ivba = testcv(rnorm(n = 100, mean = 56, sd = 2),10),
+#       tot.incr = 10, ivba.incr = 10, "Pb")

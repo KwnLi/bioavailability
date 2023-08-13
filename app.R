@@ -1,7 +1,7 @@
 source("app_functions_4steps.R")
 source("gui_functions.R")
 
-using("shiny", "shinyjs", "cowplot", "ggplot2", "truncnorm", "dplyr")
+using("shiny", "shinyjs", "cowplot", "ggplot2", "truncnorm", "dplyr", "ggpattern")
 
 ##### Input GUI #####
 ui <- fluidPage(
@@ -39,24 +39,28 @@ ui <- fluidPage(
           numericInput("tot.n", "# of samples to be analyzed for total metal concentration", 5)
         ),
         
-        # composite total
-        radioButtons("comp_tot", "Sample aggregation (tot. conc.)", choices = c(Discrete = FALSE, Composite = TRUE), inline=TRUE),
-        conditionalPanel(
-          condition = "input.comp_tot == 'TRUE'",
-          numericInput("tot.incr", label = div(style = "font-weight: normal; font-style: italic", "*Increments per composite total sample:"), value=2, min = 2)),
-        
         # IVBA sample input
         conditionalPanel(
           condition = "input.step == 1 | input.step == 2",
           numericInput("ivba.n", "# of samples to be analyzed for IVBA", 3)
         ),
         
-        # composite IVBA
-        radioButtons("comp_ivba", "Sample aggregation (IVBA)", choices = c(Discrete = FALSE, Composite = TRUE), inline=TRUE),
+        # composite
         conditionalPanel(
-          condition = "input.comp_ivba == 'TRUE'",
-          numericInput("ivba.incr", label = div(style = "font-weight: normal; font-style: italic", "*Increments per composite IVBA sample:"), value=2, min = 2)),
+          condition = "input.step >= 2",
+          
+          radioButtons("composite", "Sample aggregation", choices = c(Discrete = FALSE, Composite = TRUE), inline=TRUE),
+          conditionalPanel(
+            condition = "input.composite == 'TRUE'",
+            numericInput("incr", label = div(style = "font-weight: normal; font-style: italic", "*Increments per composite sample:"), value=2, min = 2))
+        ),
         
+        # # composite IVBA
+        # radioButtons("comp_ivba", "Sample aggregation (IVBA)", choices = c(Discrete = FALSE, Composite = TRUE), inline=TRUE),
+        # conditionalPanel(
+        #   condition = "input.comp_ivba == 'TRUE'",
+        #   numericInput("ivba.incr", label = div(style = "font-weight: normal; font-style: italic", "*Increments per composite IVBA sample:"), value=2, min = 2)),
+
         # Mean of 95% conf. int.
         radioButtons("useMeanTot", "Base final bioavailable metal concentration calculation on:", 
                      choices = c(`Mean` = T, `Upper 95% CI of mean` = F)),
@@ -70,6 +74,7 @@ ui <- fluidPage(
           condition = "input.step == 1",
           h4("Step 1 Input"),
           numericInput("sampmax", label = "Maximum number of samples to simulate:", value = 10, min = 2),
+          textInput("incr.vec", "List of composite increment numbers to test, separated by commas (1=discrete sampling)"),
           radioButtons("abs_frcAct", "Assumed level of soil contamination to simulate (expressed in terms of %)", 
                        choices = c(`+/-25% action level` = 0.25, 
                                    "Custom"), 
@@ -115,31 +120,61 @@ ui <- fluidPage(
         ),
         
         hr(),
-        h4("Decision Unit Assumptions"),
-
-        selectInput("dist_tot", "Total metal concentration data distribution:", 
-                    choices = c(`log-normal` = "lognorm", normal = "normal")),
-        radioButtons("coeV.tot", "Total metal concentration coefficient of variance (CoV):", 
-                     choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
-        # conditional input if metal CoV is custom
+        
         conditionalPanel(
-          condition = "input.coeV.tot == 'Custom'",
-          numericInput("coeV.tot_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom metal CoV value:"), 0.75, step = 0.05, min = 0)),
-        selectInput("dist_rba", "RBA data distribution:",
-                    choices = c(normal = "normal", uniform = "uniform", `log-normal` = "lognorm")),
-        radioButtons("coeV.rba", "RBA CoV:", 
-                     choices = c(0.05, 0.15, 0.30, "Custom"), inline=TRUE),
-        # conditional input if RBA CoV is custom
-        conditionalPanel(
-          condition = "input.coeV.rba == 'Custom'",
-          numericInput("coeV.rba_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom RBA CoV value:"), 0.10, step = 0.05, min = 0)),
-        radioButtons("mn.rba", "RBA mean:", 
-                     choices = c(`60%` = 60, "Custom"), inline=TRUE),
-        # conditional input if assumed mean RBA is custom
-        conditionalPanel(
-          condition = "input.rba.mn == 'Custom'",
-          numericInput("mn.rba_custom", label = div(style = "font-weight: normal; font-style: italic", "*Custom mean RBA value (%):"), 50, step = 5, min = 0)),
-        hr(),
+          condition = "input.step != 3",
+          h4("Decision Unit Assumptions"),
+          
+          # Total distribution assumptions
+          selectInput("dist_tot", "Total metal concentration data distribution:", 
+                      choices = c(`log-normal` = "lognorm", normal = "normal")),
+          # conditionalPanel(
+          #   condition = "input.step != 4",
+          #   radioButtons("coeV_tot", "Total metal concentration coefficient of variance (CoV):", 
+          #                choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
+          #   # conditional input if metal CoV is custom
+          #   conditionalPanel(
+          #     condition = "input.coeV_tot == 'Custom'",
+          #     numericInput("coeV_tot_custom", 
+          #                  label = div(style = "font-weight: normal; font-style: italic", "*Custom metal CoV value:"), 
+          #                  0.75, step = 0.05, min = 0)
+          #     )
+          # ),
+          
+          # RBA distribution assumptions
+          selectInput("dist_rba", "RBA data distribution:",
+                      choices = c(normal = "normal", uniform = "uniform", `log-normal` = "lognorm")),
+          conditionalPanel(
+            condition = "input.step != 4",
+            radioButtons("coeV_tot", "Total metal concentration coefficient of variance (CoV):", 
+                         choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
+            # conditional input if metal CoV is custom
+            conditionalPanel(
+              condition = "input.coeV_tot == 'Custom'",
+              numericInput("coeV_tot_custom", 
+                           label = div(style = "font-weight: normal; font-style: italic", "*Custom metal CoV value:"), 
+                           0.75, step = 0.05, min = 0)
+            ),
+            radioButtons("coeV_rba", "RBA CoV:", 
+                         choices = c(0.05, 0.15, 0.30, "Custom"), inline=TRUE),
+            # conditional input if RBA CoV is custom
+            conditionalPanel(
+              condition = "input.coeV_rba == 'Custom'",
+              numericInput("coeV_rba_custom", 
+                           label = div(style = "font-weight: normal; font-style: italic", "*Custom RBA CoV value:"),
+                           0.10, step = 0.05, min = 0)),
+            radioButtons("mn_rba", "RBA mean:", 
+                         choices = c(`60%` = 60, "Custom"), inline=TRUE),
+            # conditional input if assumed mean RBA is custom
+            conditionalPanel(
+              condition = "input.mn_rba == 'Custom'",
+              numericInput("mn_rba_custom",
+                           label = div(style = "font-weight: normal; font-style: italic", "*Custom mean RBA value (%):"),
+                           50, step = 5, min = 0, max = 100))
+          ),
+          
+          hr()
+        ),
         
         actionButton(inputId = "go", label = "Run simulation")
       ),
@@ -206,37 +241,37 @@ server <- function(input, output, session){
            input$frcAct_custom/100, 
            as.numeric(input$abs_frcAct))
   })
-  coeV.tot <- reactive({
-    ifelse(input$coeV.tot=="Custom", 
-           input$coeV.tot_custom, 
-           as.numeric(input$coeV.tot))
+  coeV_tot <- reactive({
+    ifelse(input$coeV_tot=="Custom",
+           input$coeV_tot_custom,
+           as.numeric(input$coeV_tot))
   })
-  coeV.rba <- reactive({
-    ifelse(input$coeV.rba=="Custom", 
-           input$coeV.rba_custom, 
-           as.numeric(input$coeV.rba))
+  coeV_rba <- reactive({
+    ifelse(input$coeV_rba=="Custom",
+           input$coeV_rba_custom,
+           as.numeric(input$coeV_rba))
   })
-  mn.rba <- reactive({
-    ifelse(input$mn.rba=="Custom", 
-           input$mn.rba_custom, 
-           as.numeric(input$mn.rba))
-  })
-  observe({
-    comptot.choice = input$comp_tot
-    if(comptot.choice==FALSE){
-      updateNumericInput(session, "tot.incr", value = 1)
-    }else{
-      updateNumericInput(session, "tot.incr", value = 2)
-    }
+  mn_rba <- reactive({
+    ifelse(input$mn_rba=="Custom",
+           input$mn_rba_custom,
+           as.numeric(input$mn_rba))
   })
   observe({
-    compivba.choice = input$comp_ivba
-    if(compivba.choice==FALSE){
-      updateNumericInput(session, "ivba.incr", value = 1)
+    comp.choice = input$composite
+    if(comp.choice==FALSE){
+      updateNumericInput(session, "incr", value = 1)
     }else{
-      updateNumericInput(session, "ivba.incr", value = 2)
+      updateNumericInput(session, "incr", value = 2)
     }
   })
+  # observe({
+  #   compivba.choice = input$comp_ivba
+  #   if(compivba.choice==FALSE){
+  #     updateNumericInput(session, "ivba.incr", value = 1)
+  #   }else{
+  #     updateNumericInput(session, "ivba.incr", value = 2)
+  #   }
+  # })
   observe({
     minFrcAct = input$minFrcAct
     maxFrcAct = input$maxFrcAct
@@ -252,6 +287,7 @@ server <- function(input, output, session){
       withProgress(
         message = "Running step 1 simulations", value = 0,{
           incProgress(1/3, detail = "Simulating type I error")
+          incr.vec <- as.numeric(strsplit(input$incr.vec, split = ",")[[1]])
           
           type1 <- step1(
             AsPb = "Pb",  # restrict to Pb for manuscript
@@ -259,14 +295,13 @@ server <- function(input, output, session){
             actLvlRBA = input$actLvlRBA,
             tot.n = as.numeric(input$tot.n),
             ivba.n = as.numeric(input$ivba.n),
-            tot.incr = as.numeric(input$tot.incr),
-            ivba.incr = as.numeric(input$ivba.incr),
+            incr.vec = incr.vec,
             useMeanTot = as.logical(input$useMeanTot),
             useMeanIVBA = TRUE,
             frcAct = abs_frcAct(),
-            coeV.tot = coeV.tot(),
-            coeV.rba = coeV.rba(),
-            mn.rba = mn.rba(),
+            coeV.tot = coeV_tot(),
+            coeV.rba = coeV_rba(),
+            mn.rba = mn_rba(),
             error_tot = as.logical(input$error_tot),
             error_ivb = as.logical(input$error_ivb),
             error_ivb_cv = as.numeric(input$error_ivb_cv),
@@ -284,14 +319,13 @@ server <- function(input, output, session){
             actLvlRBA = input$actLvlRBA,
             tot.n = as.numeric(input$tot.n),
             ivba.n = as.numeric(input$ivba.n),
-            tot.incr = as.numeric(input$tot.incr),
-            ivba.incr = as.numeric(input$ivba.incr),
+            incr.vec = incr.vec,
             useMeanTot = as.logical(input$useMeanTot),
             useMeanIVBA = TRUE,
             frcAct = -abs_frcAct(),
-            coeV.tot = coeV.tot(),
-            coeV.rba = coeV.rba(),
-            mn.rba = mn.rba(),
+            coeV.tot = coeV_tot(),
+            coeV.rba = coeV_rba(),
+            mn.rba = mn_rba(),
             error_tot = as.logical(input$error_tot),
             error_ivb = as.logical(input$error_ivb),
             error_ivb_cv = as.numeric(input$error_ivb_cv),
@@ -316,13 +350,13 @@ server <- function(input, output, session){
             actLvlRBA = input$actLvlRBA,
             tot.n = as.numeric(input$tot.n),
             ivba.n = as.numeric(input$ivba.n),
-            tot.incr = as.numeric(input$tot.incr),
-            ivba.incr = as.numeric(input$ivba.incr),
+            tot.incr = as.numeric(input$incr),
+            ivba.incr = as.numeric(input$incr),
             useMeanTot = as.logical(input$useMeanTot),
             useMeanIVBA = TRUE,
-            coeV.tot = coeV.tot(),
-            coeV.rba = coeV.rba(),
-            mn.rba = mn.rba(),
+            coeV.tot = coeV_tot(),
+            coeV.rba = coeV_rba(),
+            mn.rba = mn_rba(),
             error_tot = as.logical(input$error_tot),
             error_ivb = as.logical(input$error_ivb),
             error_ivb_cv = as.numeric(input$error_ivb_cv),
@@ -342,13 +376,13 @@ server <- function(input, output, session){
             actLvlRBA = input$actLvlRBA,
             tot.n = as.numeric(input$tot.n),
             ivba.n = as.numeric(input$ivba.n),
-            tot.incr = as.numeric(input$tot.incr),
-            ivba.incr = as.numeric(input$ivba.incr),
+            tot.incr = as.numeric(input$incr),
+            ivba.incr = as.numeric(input$incr),
             useMeanTot = as.logical(input$useMeanTot),
             useMeanIVBA = TRUE,
-            coeV.tot = coeV.tot(),
-            coeV.rba = coeV.rba(),
-            mn.rba = mn.rba(),
+            coeV.tot = coeV_tot(),
+            coeV.rba = coeV_rba(),
+            mn.rba = mn_rba(),
             error_tot = as.logical(input$error_tot),
             error_ivb = as.logical(input$error_ivb),
             error_ivb_cv = as.numeric(input$error_ivb_cv),
@@ -366,7 +400,7 @@ server <- function(input, output, session){
     }else if(input$step == 3){
       ##### Step 3 #####
       withProgress(
-        message = "Running step 2 simulations", value = 0,{
+        message = "Running step 3 simulations", value = 0,{
           meas.tot <- as.numeric(strsplit(input$meas.tot, split = ",")[[1]])
           meas.ivba <- as.numeric(strsplit(input$meas.ivba, split = ',')[[1]])
           validate(
@@ -381,10 +415,43 @@ server <- function(input, output, session){
             AsPb = "Pb",  # restrict to Pb for manuscript
             actLvl = input$actLvl,
             actLvlRBA = input$actLvlRBA,
-            tot.incr = as.numeric(input$tot.incr),
-            ivba.incr = as.numeric(input$ivba.incr)
+            tot.incr = as.numeric(input$incr),
+            ivba.incr = as.numeric(input$incr),
+            useMeanTot = as.logical(input$useMeanTot)
           )
-          return(step3result)
+          return(list(step3 = step3result))
+        }
+      )
+    }else if(input$step == 4){
+      withProgress(
+        message = "Running step 4 simulations", value = 0,{
+          meas.tot <- as.numeric(strsplit(input$meas.tot, split = ",")[[1]])
+          meas.ivba <- as.numeric(strsplit(input$meas.ivba, split = ',')[[1]])
+          validate(
+            need(all(!is.na(meas.tot)), "Please only use numeric values separated by commas for total concentration input"),
+            need(all(!is.na(meas.ivba)), "Please only use numeric values separated by commas for measured IVBA input")
+          )
+          
+          incProgress(1/2, detail = "Simulating")
+          step4result <- step4(
+            meas.tot = meas.tot,      # actual total concentration measurements
+            meas.ivba = meas.ivba,     # actual ivba measurements
+            AsPb = "Pb",  # restrict to Pb for manuscript
+            actLvl = input$actLvl,
+            actLvlRBA = input$actLvlRBA,
+            tot.incr = as.numeric(input$incr),
+            ivba.incr = as.numeric(input$incr),
+            useMeanTot = as.logical(input$useMeanTot),
+            error_tot = as.logical(input$error_tot),
+            error_ivb = as.logical(input$error_ivb),
+            error_ivb_cv = as.numeric(input$error_ivb_cv),
+            ivba_model = as.logical(input$ivba_model),
+            post_mean = as.logical(input$post_mean),
+            iter = input$iter,
+            dist_tot = input$dist_tot,
+            dist_rba = input$dist_rba
+          )
+          return(step4result)
         }
       )
     }
@@ -406,6 +473,8 @@ server <- function(input, output, session){
       s2_t2 <- step2_plot(simResult()$type2)
       
       plot_grid(s2_t1, s2_t2)
+    }else if(input$step == 4){
+      step4_plot(simResult())
     }
     })
   output$simTable <- renderTable({
@@ -415,10 +484,10 @@ server <- function(input, output, session){
                                    "CoV in % RBA across the DU",
                                    "Estimated mean % RBA"),
                  `Value inferred post-sampling based on sampling results` =
-                   c(simResult()$meas.frcAct,
-                     simResult()$coeV.tot,
-                     simResult()$coeV.rba,
-                     simResult()$mn.rba),
+                   c(simResult()$step3$meas.frcAct,
+                     simResult()$step3$coeV.tot,
+                     simResult()$step3$coeV.rba,
+                     simResult()$step3$mn.rba),
                  check.names = FALSE
                  )
     }
