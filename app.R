@@ -128,22 +128,12 @@ ui <- fluidPage(
           # Total distribution assumptions
           selectInput("dist_tot", "Total metal concentration data distribution:", 
                       choices = c(`log-normal` = "lognorm", normal = "normal")),
-          # conditionalPanel(
-          #   condition = "input.step != 4",
-          #   radioButtons("coeV_tot", "Total metal concentration coefficient of variance (CoV):", 
-          #                choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
-          #   # conditional input if metal CoV is custom
-          #   conditionalPanel(
-          #     condition = "input.coeV_tot == 'Custom'",
-          #     numericInput("coeV_tot_custom", 
-          #                  label = div(style = "font-weight: normal; font-style: italic", "*Custom metal CoV value:"), 
-          #                  0.75, step = 0.05, min = 0)
-          #     )
-          # ),
           
           # RBA distribution assumptions
           selectInput("dist_rba", "RBA data distribution:",
                       choices = c(normal = "normal", uniform = "uniform", `log-normal` = "lognorm")),
+          
+          # Distribution parameters for steps 1 and 2
           conditionalPanel(
             condition = "input.step != 4",
             radioButtons("coeV_tot", "Total metal concentration coefficient of variance (CoV):", 
