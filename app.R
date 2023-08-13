@@ -9,8 +9,8 @@ ui <- fluidPage(
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
   titlePanel("Simulate error in bioavailability estimation"),
   h4("Four step version"),
-  helpText("Associated manuscript"),
-  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Feb 18, 2023")),
+  helpText("For manuscript"),
+  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Aug 13, 2023")),
 
   sidebarPanel(
     tabsetPanel(
@@ -171,22 +171,26 @@ ui <- fluidPage(
       tabPanel(
         title = "Sim. params",
         h4("Simulation Parameters"),
-        selectInput("error_tot", "Simulate measurement error for total concentration", choices = c(TRUE, FALSE)),
-        selectInput("error_ivb", "Simulate measurement error for IVBA", choices = c(TRUE, FALSE)),
         conditionalPanel(
-          condition = "input.error_ivb == 'TRUE'",
-          numericInput("error_ivb_cv", 
-                       label = div(style = "font-weight: normal; font-style: italic", "*IVBA error coefficient of variation"),
-                       min = 0, value = 0.050, step = 0.01)
-        ),
-        selectInput("ivba_model", "Simulate IVBA model error", choices = c(TRUE, FALSE), selected = FALSE),
-        conditionalPanel(
-          condition = "input.ivba_model == 'TRUE'",
-          selectInput("post_mean",
-                      label = div(style = "font-weight: normal; font-style: italic", "*Simulate IVBA model error AFTER summarizing samples?"),
-                      choices = c(TRUE, FALSE), selected = FALSE)
-        ),
-        numericInput("iter", "Number of simulations", step = 1000, min = 100, value = 5000),
+          "input.step != 3",
+          
+          selectInput("error_tot", "Simulate measurement error for total concentration", choices = c(TRUE, FALSE)),
+          selectInput("error_ivb", "Simulate measurement error for IVBA", choices = c(TRUE, FALSE)),
+          conditionalPanel(
+            condition = "input.error_ivb == 'TRUE'",
+            numericInput("error_ivb_cv", 
+                         label = div(style = "font-weight: normal; font-style: italic", "*IVBA error coefficient of variation"),
+                         min = 0, value = 0.050, step = 0.01)
+          ),
+          selectInput("ivba_model", "Simulate IVBA model error", choices = c(TRUE, FALSE), selected = FALSE),
+          conditionalPanel(
+            condition = "input.ivba_model == 'TRUE'",
+            selectInput("post_mean",
+                        label = div(style = "font-weight: normal; font-style: italic", "*Simulate IVBA model error AFTER summarizing samples?"),
+                        choices = c(TRUE, FALSE), selected = FALSE)
+          ),
+          numericInput("iter", "Number of simulations", step = 1000, min = 100, value = 5000)
+          )
       ),
     )
   ),
@@ -207,16 +211,16 @@ ui <- fluidPage(
 
                ),
       tabPanel(
-        title = "Download",
-        h4("Simulation values"),
-        downloadButton(outputId = "downDU", "DU samples and measured values"),
-        downloadButton(outputId = "downincr", "DU raw increments"),
-        downloadButton(outputId = "downprd_BA", "Predicted bioavailability"),
-        downloadButton(outputId = "plotData", "Plot data"),
-        downloadButton(outputId = "plotMetadata", "Metadata"),
-        br(),
-        h4("Simulation R data"),
-        downloadButton(outputId = "downall", "Type 1 sim rds")
+        title = "Download"
+        # h4("Simulation values"),
+        # downloadButton(outputId = "downDU", "DU samples and measured values"),
+        # downloadButton(outputId = "downincr", "DU raw increments"),
+        # downloadButton(outputId = "downprd_BA", "Predicted bioavailability"),
+        # downloadButton(outputId = "plotData", "Plot data"),
+        # downloadButton(outputId = "plotMetadata", "Metadata"),
+        # br(),
+        # h4("Simulation R data"),
+        # downloadButton(outputId = "downall", "Type 1 sim rds")
       )
 
     )
