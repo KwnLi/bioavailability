@@ -382,7 +382,7 @@ step1 <- function(
 #   error_tot = TRUE,
 #   error_ivb = TRUE,
 #   error_ivb_cv = 0.05,
-#   ivba_model = TRUE, 
+#   ivba_model = TRUE,
 #   incr.vec = c(1,5,10)
 # )
 
@@ -496,10 +496,10 @@ step3 <- function(
     coeV.rba = coeV.rba
   )
 
-  return(step3.out)
+  return(list(step3 = step3.out))
 }
 
-# test = step3(c(340,580,209,300,333), meas.ivba = c(78,76,45),
+# teststep3 = step3(c(340,580,209,300,333), meas.ivba = c(78,76,45),
 #       tot.incr = 5, ivba.incr = 5,
 #       "Pb")
 
@@ -510,12 +510,9 @@ testcv <- function(x, incr){    # function returns incremented x by taking means
   return(rowMeans(x.mat))
 }
 
-step3(testcv(rnorm(n = 10000, mean = 300, sd = 20),100), 
-      meas.ivba = testcv(rnorm(n = 10000, mean = 75, sd = 5),100),
-      tot.incr = 100, ivba.incr = 100, "Pb") # simulates increments of 10
-
-step3(rnorm(n = 100000, mean = 300, sd = 20), meas.ivba = c(78,76,45),
-      tot.incr = 1, ivba.incr = 1, "Pb")
+# teststep3 <-  step3(testcv(rnorm(n = 10000, mean = 300, sd = 20),100),
+#       meas.ivba = testcv(rnorm(n = 10000, mean = 75, sd = 5),100),
+#       tot.incr = 100, ivba.incr = 100, "Pb") # simulates increments of 10
 
 # as effective number of "cores" increases (i.e., base unit of sampling whether composited or not), e
 # estimated coeV gets closer to the original inputted coeV (sd=20, mn = 300)
@@ -554,11 +551,11 @@ step4 <- function(
   accuracy.sim <- simDU(
     AsPb = AsPb, actLvl = actLvl, actLvlRBA = actLvlRBA,
     frcAct = 0, 
-    tot.n = meas.dist.param$tot.n, tot.incr = tot.incr,
-    ivba.n = meas.dist.param$rba.n, ivba.incr = ivba.incr,
-    coeV.tot = meas.dist.param$coeV.tot,
-    coeV.rba = meas.dist.param$coeV.rba,
-    mn.rba = meas.dist.param$mn.rba,
+    tot.n = meas.dist.param$step3$tot.n, tot.incr = tot.incr,
+    ivba.n = meas.dist.param$step3$rba.n, ivba.incr = ivba.incr,
+    coeV.tot = meas.dist.param$step3$coeV.tot,
+    coeV.rba = meas.dist.param$step3$coeV.rba,
+    mn.rba = meas.dist.param$step3$mn.rba,
     useMeanTot = useMeanTot,
     outputLvl = 2,
     ...
@@ -566,18 +563,18 @@ step4 <- function(
   
   precision.sim <- simDU(
     AsPb = AsPb, actLvl = actLvl, actLvlRBA = actLvlRBA,
-    frcAct = meas.dist.param$meas.frcAct, 
-    tot.n = meas.dist.param$tot.n, tot.incr = tot.incr,
-    ivba.n = meas.dist.param$rba.n, ivba.incr = ivba.incr,
-    coeV.tot = meas.dist.param$coeV.tot,
-    coeV.rba = meas.dist.param$coeV.rba,
-    mn.rba = meas.dist.param$mn.rba,
+    frcAct = meas.dist.param$step3$meas.frcAct, 
+    tot.n = meas.dist.param$step3$tot.n, tot.incr = tot.incr,
+    ivba.n = meas.dist.param$step3$rba.n, ivba.incr = ivba.incr,
+    coeV.tot = meas.dist.param$step3$coeV.tot,
+    coeV.rba = meas.dist.param$step3$coeV.rba,
+    mn.rba = meas.dist.param$step3$mn.rba,
     useMeanTot = useMeanTot,
     outputLvl = 2,
     ...
   )
   
-  return(list(accuracy.sim = accuracy.sim, precision.sim = precision.sim, step3 = meas.dist.param))
+  return(list(accuracy.sim = accuracy.sim, precision.sim = precision.sim, step3 = meas.dist.param$step3))
 }
 
 # teststep4 <- step4(testcv(rnorm(n = 100, mean = 300, sd = 20),10), meas.ivba = testcv(rnorm(n = 100, mean = 56, sd = 2),10),

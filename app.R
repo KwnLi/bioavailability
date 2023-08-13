@@ -202,13 +202,12 @@ ui <- fluidPage(
       tabPanel("Error Results",
                # h3(textOutput("resultTitle")),
                br(),
-               conditionalPanel(condition = "input.step != 3 | input.step == 4", 
+               conditionalPanel(condition = "input.step > 2", 
                                 tableOutput("simTable")
                ),
-               conditionalPanel(condition = "input.step == 1 | input.step == 2",
+               conditionalPanel(condition = "input.step != 3",
                                 plotOutput("errorSimPlot")
                                 )
-
                ),
       tabPanel(
         title = "Download"
@@ -413,7 +412,7 @@ server <- function(input, output, session){
             ivba.incr = as.numeric(input$incr),
             useMeanTot = as.logical(input$useMeanTot)
           )
-          return(list(step3 = step3result))
+          return(step3result)
         }
       )
     }else if(input$step == 4){

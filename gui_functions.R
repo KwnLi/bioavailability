@@ -14,9 +14,13 @@ step1_plot <- function(step1.output){
   frcAct <- step1.output$step1$frcAct[1]
   errortype <- ifelse(frcAct > 0, "Type 1", "Type 2")
   
-  ggplot(step1.output$step1 %>% 
-           mutate(aggregation = ifelse(
-             n_incr==1, "discrete", paste("Incr. = ", n_incr))),
+  step1results <- step1.output$step1 %>% 
+    mutate(aggregation = ifelse(n_incr==1, "discrete", paste("Incr. = ", n_incr)))
+  
+  step1results$aggregation <- factor(step1results$aggregation,
+                                     levels = unique(step1results$aggregation[order(step1results$n_incr)]))
+  
+  ggplot(step1results,
          aes(x = n_tot, y = err_pb*100, color = aggregation)) + 
     geom_line() + geom_point() + 
     xlab("Num. samples analyzed (total concentration)") + 
