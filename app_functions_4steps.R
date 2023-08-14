@@ -1,6 +1,16 @@
-# library(ggplot2)
-# library(truncnorm) 
-# library(dplyr)
+# package checking and installation
+# from: https://stackoverflow.com/questions/4090169/elegant-way-to-check-for-missing-packages-and-install-them
+using<-function(...) {
+  libs<-unlist(list(...))
+  req<-unlist(lapply(libs,require,character.only=TRUE))
+  need<-libs[req==FALSE]
+  if(length(need)>0){ 
+    install.packages(need)
+    lapply(need,require,character.only=TRUE)
+  }
+}
+
+using("shiny", "shinyjs", "cowplot", "ggplot2", "truncnorm", "dplyr", "ggpattern", "egg")
 
 ##### Custom lognormal #####
 # just a wrapper form the rlnorm that converts the normal mean and sd
