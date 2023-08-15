@@ -56,10 +56,16 @@ step2_plot <- function(step2.output){
           )
 }
 
+step2_text <- function(step2_t1, step2_t2){
+  
+}
+
 step4_plot <- function(step4.output){
   
   measured.EPC <- step4.output$step3$meas.ba
   action.level <- step4.output$step3$actLvl.adj
+  
+  error.type <- ifelse(measured.EPC<action.level, "Type 1", "Type 2")
   
   total.range <- range(c(step4.output$accuracy.sim$DU_sim$ba_DU, step4.output$precision.sim$DU_sim$ba_DU))
   
@@ -86,10 +92,27 @@ step4_plot <- function(step4.output){
   ) %>% bind_rows(.id = "Simulation")
   
   hatchresults <- step4results %>%
-    filter((Simulation == "Accuracy" & ba_DU <= measured.EPC)|
-             (Simulation == "Precision" & ba_DU > action.level))
+    filter(if(error.type == "Type 1"){
+        (Simulation == "Accuracy" & ba_DU <= measured.EPC)|(Simulation == "Precision" & ba_DU > action.level)
+      }else{
+        (Simulation == "Accuracy" & ba_DU > measured.EPC)|(Simulation == "Precision" & ba_DU <= action.level)
+      })
   
-  ggplot(step4results, aes(ba_DU)) +
+  accuracy_ct <- if(error.type == "Type 1"){
+    sum(step4.output$accuracy.sim$DU_sim$ba_DU < measured.EPC)
+  }else{
+    sum(step4.output$accuracy.sim$DU_sim$ba_DU > measured.EPC)
+  }
+  
+  precision_ct <- if(error.type == "Type 1"){
+    sum(step4.output$precision.sim$DU_sim$ba_DU > action.level)
+  }else{
+    sum(step4.output$precision.sim$DU_sim$ba_DU < action.level)
+  }
+  
+  sim_ct <- nrow(step4.output$accuracy.sim$DU_sim)
+  
+  outplot <- ggplot(step4results, aes(ba_DU)) +
     geom_histogram(breaks = sort(custombreaks), fill = "wheat", color = "black") + 
     geom_histogram_pattern(data = hatchresults,
                            mapping = aes(ba_DU),
@@ -104,15 +127,36 @@ step4_plot <- function(step4.output){
     theme_article() +
     geom_vline(data = data.frame(threshold = c("Measured EPC", "Action level"),
                                  value = c(measured.EPC, action.level)),
-      mapping = aes(xintercept = value, linetype = threshold, color = threshold), 
+               mapping = aes(xintercept = value, linetype = threshold, color = threshold), 
                size = 0.8, key_glyph = "path") +
     scale_linetype_manual(values = c(1, 2)) +
     scale_color_manual(values = c("red", "blue")) +
     labs(linetype = "", color = "") +
-    xlab("Model-estimated measured EPC (mg kg-1)\nacross 5,000 model iterations") +
+    xlab(paste0("Model-estimated measured EPC (mg kg-1)\nacross ",
+               sim_ct, " model iterations")) +
     theme(axis.text = element_text( size = 14 ),
           axis.title = element_text( size = 16, face = "bold" ),
           strip.text = element_text(size = 20),
           legend.text=element_text(size = 14),
           legend.position = "top")
+  
+  accuracyText <- paste(
+    "<b>Accuracy:</b> ", round(100*accuracy_ct/sim_ct, 1), 
+    "% of the simulated measured bioavailability-adjusted EPCs (i.e., ",
+    accuracy_ct, " out of ", sim_ct, " simulations) are ", 
+    ifelse(error.type == "Type 1", "less than", "greater than"), 
+    " the observed EPC assuming the DU's true EPC equals the AL.", sep = ""
+  )
+  
+  precisionText <- paste(
+    "<b>Precision:</b> ", round(100*precision_ct/sim_ct, 1),
+    "% of the simulated measured bioavailability-adjusted EPCs (i.e., ",
+    precision_ct, " out of ", sim_ct, " simulations) are ", 
+    ifelse(error.type == "Type 1", "greater than", "less than"), 
+    " the AL assuming the DU's true EPC equals the measured EPC.", sep = ""
+  )
+  
+  return(list(outplot = outplot, accuracyText = accuracyText, precisionText = precisionText))
 }
+
+

@@ -205,6 +205,10 @@ ui <- fluidPage(
                ),
                conditionalPanel(condition = "input.step != 3",
                                 plotOutput("errorSimPlot")
+                                ),
+               conditionalPanel(condition = "input.step == 4",
+                                htmlOutput("accuracyText"),
+                                htmlOutput("precisionText")
                                 )
                ),
       tabPanel(
@@ -465,7 +469,7 @@ server <- function(input, output, session){
       
       plot_grid(s2_t1, s2_t2)
     }else if(input$step == 4){
-      step4_plot(simResult())
+      step4_plot(simResult())$outplot
     }
     })
   output$simTable <- renderTable({
@@ -484,12 +488,12 @@ server <- function(input, output, session){
     }
   })
   # output$errorText <- renderUI({HTML(simText(simResult()[[1]]))})
-  # output$errorSimWarn <- renderText({
-  #   validate(
-  #     need(simResult()[[1]]$sim_attributes$simWarnings, NULL)
-  #   )
-  #   paste0(simResult()[[1]]$sim_attributes$simWarnings, collapse = " ")
-  #   })
+  output$accuracyText <- renderUI({
+    HTML(step4_plot(simResult())$accuracyText)
+    })
+  output$precisionText <- renderUI({
+    HTML(step4_plot(simResult())$precisionText)
+  })
   # output$SampleSimTitle <- renderText({
   #   if(input$simChoice == "none"){
   #     "No advanced simulations selected"

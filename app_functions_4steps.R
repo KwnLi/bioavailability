@@ -587,5 +587,6 @@ step4 <- function(
   return(list(accuracy.sim = accuracy.sim, precision.sim = precision.sim, step3 = meas.dist.param$step3))
 }
 
-# teststep4 <- step4(testcv(rnorm(n = 100, mean = 300, sd = 20),10), meas.ivba = testcv(rnorm(n = 100, mean = 56, sd = 2),10),
-#       tot.incr = 10, ivba.incr = 10, "Pb")
+teststep4 <- step4(testcv(rnorm(n = 100, mean = 400, sd = 39),10),
+                   meas.ivba = testcv(rnorm(n = 100, mean = 78, sd = 15),10),
+      tot.incr = 10, ivba.incr = 10, "Pb")
