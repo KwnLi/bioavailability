@@ -388,12 +388,12 @@ step1 <- function(
 #   sampmax = 50,
 #   frcAct = -0.25,
 #   coeV.tot = 0.5,
-#   coeV.rba = 0.05,
+#   coeV.rba = 0.3,
 #   error_tot = TRUE,
 #   error_ivb = TRUE,
 #   error_ivb_cv = 0.05,
 #   ivba_model = TRUE,
-#   incr.vec = c(1,5,10)
+#   incr.vec = c(1,5)
 # )
 
 ##### Step 2 #####
@@ -421,32 +421,41 @@ step2 <- function(
                                 to = ifelse(maxFrcAct>-1,maxFrcAct,-0.01), 
                                 length.out = numbins), 2)
   
-  step2.out <- list()
+  err_pb <- list()
+  simQt <- list()
   for(i in 1:length(frcActRange)){
     # progress message
     print(paste("Simulating", 100*abs(frcActRange[i]), "%",
                 ifelse(frcActRange[i]<0,"below","above"),
                 "the action level", sep = " "))
-    step2.out[[i]] <- simDU(
+    sim.i <- simDU(
       AsPb = AsPb,
       tot.n = tot.n,
       ivba.n = ivba.n,
       frcAct = frcActRange[i],
-      outputLvl = 1,
+      outputLvl = 2,
       ...
-    )$err_pb
+    )
+    
+    err_pb[[i]] <- sim.i$err_pb
+    simQt[[i]] <- quantile(sim.i$DU_sim$ba_DU, probs = c(0.05, 0.25, 0.50, 0.75, 0.95))
   }
-  return(list(step2 = bind_rows(step2.out), AsPb = AsPb))
+  
+  simQt <- bind_rows(simQt) %>% rename_with(.fn = ~paste0("ba_sim_", .))
+  
+  step2.out <- bind_rows(err_pb) %>% bind_cols(simQt)
+  
+  return(list(step2 = step2.out, AsPb = AsPb))
 }
 
-# test.step2 <- step2(
+# test.step2.2 <- step2(
 #   AsPb = "Pb",
 #   tot.n = 5,
 #   tot.incr = 10,
 #   ivba.n = 3,
 #   ivba.incr = 10,
-#   minFrcAct = 0.01,
-#   maxFrcAct = 0.99,
+#   minFrcAct = -0.01,
+#   maxFrcAct = -0.99,
 #   coeV.tot = 0.5,
 #   coeV.rba = 0.05,
 #   error_tot = TRUE,
@@ -503,7 +512,9 @@ step3 <- function(
     coeV.tot = coeV.tot,
     mn.rba = mn.rba,
     rba.n = rba.n,
-    coeV.rba = coeV.rba
+    coeV.rba = coeV.rba,
+    sd.tot = sd(meas.tot),
+    sd.rba = sd(meas.rba)
   )
 
   return(list(step3 = step3.out))
@@ -587,6 +598,6 @@ step4 <- function(
   return(list(accuracy.sim = accuracy.sim, precision.sim = precision.sim, step3 = meas.dist.param$step3))
 }
 
-teststep4 <- step4(testcv(rnorm(n = 100, mean = 400, sd = 39),10),
-                   meas.ivba = testcv(rnorm(n = 100, mean = 78, sd = 15),10),
-      tot.incr = 10, ivba.incr = 10, "Pb")
+# teststep4 <- step4(testcv(rnorm(n = 100, mean = 400, sd = 39),10),
+#                    meas.ivba = testcv(rnorm(n = 100, mean = 78, sd = 15),10),
+#       tot.incr = 10, ivba.incr = 10, "Pb")

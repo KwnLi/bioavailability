@@ -57,7 +57,58 @@ step2_plot <- function(step2.output){
 }
 
 step2_text <- function(step2_t1, step2_t2){
+  type1_df <- step2_t1$step2 %>%
+    mutate(from.05 = err_pb - .05) %>% # find difference from 0.05 threshold
+    mutate(dif.neg = from.05 <= 0) %>% # sign of difference
+    mutate(lag.neg = lag(dif.neg), lead.neg = lead(dif.neg))
   
+  type2_df <- step2_t2$step2 %>%
+    mutate(from.20 = err_pb - .20) %>% # find difference from 0.20 threshold
+    mutate(dif.neg = from.20 <= 0) %>% # sign of difference
+    mutate(lag.neg = lag(dif.neg), lead.neg = lead(dif.neg))
+
+  # sort by absolute difference from threshold and find 2 closest
+  nearest.type1 <- type1_df %>% filter(from.05 < 0) %>% filter(from.05 == max(from.05)) %>%
+    bind_rows(type1_df %>% filter(from.05 > 0) %>% filter(from.05 == min(from.05)))
+  nearest.type2 <- type2_df %>% filter(from.20 < 0) %>% filter(from.20 == max(from.20)) %>%
+    bind_rows(type2_df %>% filter(from.20 > 0) %>% filter(from.20 == min(from.20)))
+  
+  # function to find interpolated value given two points (err_pb is the y)
+  interp <- function(x, y, middle.point.y){
+    slope = (y[2]-y[1])/(x[2]-x[1])
+    return(x[1] + (middle.point.y - y[1])/slope)
+  }
+  
+  # find where error crosses threshold (type 1)
+  if(nrow(nearest.type1)!=2){ # test if both same logical (==1)
+    message.type1 <- " the sampling protocol evaluated does not achieve target false compliance (Type 1) decision error probabilities across the range in the DU's true EPC assessed."
+  }else{
+    frcAct.t1 <- interp(x=nearest.type1$frcAct, y=nearest.type1$err_pb, middle.point.y=0.05)
+    tru_ba.t1 <- interp(x=nearest.type1$tru_ba, y=nearest.type1$err_pb, middle.point.y=0.05)
+    
+    message.type1 <- paste0(", so long as the DU's true bioavailability-adjusted EPC is greater than ",
+                           round(tru_ba.t1, 0), " mg bioavailable Pb (i.e., greater than ",
+                           round(100*frcAct.t1, 1), "% above the ",
+                           nearest.type1$actLvl.adj[1], " ppm AL), the sampling protocol evaluated will achieve satisfactory decision error probability goals for false compliance.")
+  }
+  
+  # find where error crosses threshold (type 2)
+  if(nrow(nearest.type2)!=2){ # test if both same logical (==1)
+    message.type2 <- " the sampling protocol evaluated does not achieve target false exceedance (Type 2) decision error probabilities across the range in the DU's true EPC assessed."
+  }else{
+    frcAct.t2 <- interp(x=nearest.type2$frcAct, y=nearest.type2$err_pb, middle.point.y=0.20)
+    tru_ba.t2 <- interp(x=nearest.type2$tru_ba, y=nearest.type2$err_pb, middle.point.y=0.20)
+    
+    message.type2 <- paste0(", so long as the DU's true bioavailability-adjusted EPC is less than ",
+                           round(tru_ba.t2, 0), " mg bioavailable Pb (i.e., less than ",
+                           round(100*abs(frcAct.t2), 1), "% below the ",
+                           nearest.type2$actLvl.adj[1], " ppm AL), the sampling protocol evaluated will achieve satisfactory decision error probability goals for false exceedance")
+  }
+
+  return(list(
+    type1 = paste0("<b>Type 1 error:</b> the simulation estimates that", message.type1),
+    type2 = paste0("<b>Type 2 error:</b> the simulation estimates that", message.type2)
+  ))
 }
 
 step4_plot <- function(step4.output){
@@ -128,7 +179,7 @@ step4_plot <- function(step4.output){
     geom_vline(data = data.frame(threshold = c("Measured EPC", "Action level"),
                                  value = c(measured.EPC, action.level)),
                mapping = aes(xintercept = value, linetype = threshold, color = threshold), 
-               size = 0.8, key_glyph = "path") +
+               linewidth = 0.8, key_glyph = "path") +
     scale_linetype_manual(values = c(1, 2)) +
     scale_color_manual(values = c("red", "blue")) +
     labs(linetype = "", color = "") +

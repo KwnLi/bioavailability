@@ -201,27 +201,37 @@ ui <- fluidPage(
                # h3(textOutput("resultTitle")),
                br(),
                conditionalPanel(condition = "input.step > 2", 
-                                tableOutput("simTable")
+                                tableOutput("simTable"),
+                                tableOutput("simIntTable"),
+                                htmlOutput("simIntTableText")
                ),
                conditionalPanel(condition = "input.step != 3",
                                 plotOutput("errorSimPlot")
                                 ),
+               conditionalPanel(condition = "input.step == 2", 
+                                htmlOutput("step2TextType1"),
+                                htmlOutput("step2TextType2")
+               ),
                conditionalPanel(condition = "input.step == 4",
                                 htmlOutput("accuracyText"),
                                 htmlOutput("precisionText")
                                 )
                ),
       tabPanel(
-        title = "Download"
-        # h4("Simulation values"),
-        # downloadButton(outputId = "downDU", "DU samples and measured values"),
-        # downloadButton(outputId = "downincr", "DU raw increments"),
-        # downloadButton(outputId = "downprd_BA", "Predicted bioavailability"),
-        # downloadButton(outputId = "plotData", "Plot data"),
-        # downloadButton(outputId = "plotMetadata", "Metadata"),
-        # br(),
-        # h4("Simulation R data"),
-        # downloadButton(outputId = "downall", "Type 1 sim rds")
+        title = "Download",
+        conditionalPanel(condition = "input.step == 1", 
+                         h4("Step 1 output"),
+                         downloadButton(outputId = "dlStep1", "Download")
+        ),
+        conditionalPanel(condition = "input.step == 2", 
+                         h4("Step 2 output"),
+                         downloadButton(outputId = "dlStep2", "Download")
+        ),
+        conditionalPanel(condition = "input.step == 4", 
+                         h4("Step 4 output"),
+                         downloadButton(outputId = "dlStep4_accuracy", "Accuracy sim results"),
+                         downloadButton(outputId = "dlStep4_precision", "Precision sim results")
+        )
       )
 
     )
@@ -474,17 +484,36 @@ server <- function(input, output, session){
     })
   output$simTable <- renderTable({
     if(input$step > 2){
-      data.frame(`Model input` = c("Assumed true EPC (relative to the AL)",
+      data.frame(`Model input` = c("Assumed true EPC (mg bioavailable Pb per kg)",
+                                   "Assumed true EPC (relative to the AL)",
                                    "CoV in total Pb across the DU ",
                                    "CoV in % RBA across the DU",
                                    "Estimated mean % RBA"),
                  `Value inferred post-sampling based on sampling results` =
                    c(simResult()$step3$meas.frcAct,
+                     simResult()$step3$meas.ba,
                      simResult()$step3$coeV.tot,
                      simResult()$step3$coeV.rba,
                      simResult()$step3$mn.rba),
                  check.names = FALSE
                  )
+    }
+  })
+  output$simIntTable <- renderTable({
+    if(input$step > 2){
+      data.frame(`Intermediete values used to derive updated model inputs` = 
+                   c("S.D. in total Pb across composites*",
+                     "S.D. in % RBA across composites*"),
+                 `Value inferred post-sampling based on sampling results` =
+                   c(simResult()$step3$sd.tot,
+                     simResult()$step3$sd.rba),
+                 check.names = FALSE
+      )
+    }
+  })
+  output$simIntTableText <- renderText({
+    if("step3" %in% names(simResult())){
+      "* S.D. observed across X composites converted to CoV in total Pb or % RBA using the following equation: S.D. (sample increments )= S.D. (observed across N composites ) x  √(# increments)"
     }
   })
   # output$errorText <- renderUI({HTML(simText(simResult()[[1]]))})
@@ -494,69 +523,38 @@ server <- function(input, output, session){
   output$precisionText <- renderUI({
     HTML(step4_plot(simResult())$precisionText)
   })
-  # output$SampleSimTitle <- renderText({
-  #   if(input$simChoice == "none"){
-  #     "No advanced simulations selected"
-  #   }else{
-  #     simTabTitle(simResult()[[1]])
-  #   }
-  # })
-  # output$precisionTitle <- renderText({
-  #   precisionTabTitle(simResult()[[1]])
-  # })
-  # output$resultTitle <- renderText({
-  #   resultTabTitle(simResult()[[1]])
-  # })
-
-  # output$finalText <- renderUI({
-  #   if(input$simChoice == "sample"){
-  #     HTML("Click on the <b>Sample Simulation</b> tab to see how increasing the number of samples analyzed for total concentration and IVBA improves Type 1 or 2 error probability.")
-  #   }else if(input$simChoice == "contaminant"){
-  #     HTML("Click on the <b>Sample Simulation</b> tab to see how Type 1 or 2 error probability changes with actual contamination level.")
-  #   }
-  #   })
-    
-  
-  # precision output
-  # output$errorPrec <- renderPlot({precPlot(simResult()[[1]])})
+  output$step2TextType1 <- renderUI({
+    HTML(step2_text(simResult()$type1, simResult()$type2)$type1)
+  })
+  output$step2TextType2 <- renderUI({
+    HTML(step2_text(simResult()$type1, simResult()$type2)$type2)
+  })
   
   # outputs: download data
-  # output$downDU <- downloadHandler(
-  #   filename = function(){"DUsamples.csv"}, 
-  #   content = function(fname){
-  #     write.csv(simResult()[[1]]$sim_attributes$samp.DUsample, fname, row.names = FALSE)
-  #   }
-  # )
-  # output$downprd_BA <- downloadHandler(
-  #   filename = function(){"prdBA.csv"}, 
-  #   content = function(fname){
-  #     write.csv(simResult()[[1]]$sim_attributes$samp.prd_ba, fname, row.names = FALSE)
-  #   }
-  # )
-  # output$downall <- downloadHandler(
-  #   filename = function(){"all.rds"}, 
-  #   content = function(fname){
-  #     saveRDS(simResult()[[1]], fname)
-  #   }
-  # )
-  # output$plotData <- downloadHandler(
-  #   filename = function(){"plotData.csv"}, 
-  #   content = function(fname){
-  #     write.csv(extractPlotData(simResult()[[1]])[[1]], fname, row.names = FALSE)
-  #   }
-  # )
-  # output$plotMetadata <- downloadHandler(
-  #   filename = function(){"plotMetadata.csv"}, 
-  #   content = function(fname){
-  #     write.csv(extractPlotData(simResult()[[1]])[[2]], fname, row.names = FALSE)
-  #   }
-  # )
-  # output$downincr <- downloadHandler(
-  #   filename = function(){"raw_incr.csv"}, 
-  #   content = function(fname){
-  #     write.csv(simResult()[[1]]$sim_attributes$samp.increments, fname, row.names = FALSE)
-  #   }
-  # )
+  output$dlStep1 <- downloadHandler(
+    filename = function(){"step1_simOutput.csv"},
+    content = function(fname){
+      write.csv(bind_rows(simResult(), .id = "errorType"), fname, row.names = FALSE)
+    }
+  )
+  output$dlStep2 <- downloadHandler(
+    filename = function(){"step2_simOutput.csv"},
+    content = function(fname){
+      write.csv(bind_rows(simResult(), .id = "errorType"), fname, row.names = FALSE)
+    }
+  )
+  output$dlStep4_accuracy <- downloadHandler(
+    filename = function(){"step4_accuracySimOutput.csv"},
+    content = function(fname){
+      write.csv(bind_cols(simType = "accuracy", simResult()$accuracy.sim$DU_sim), fname, row.names = FALSE)
+    }
+  )
+  output$dlStep4_precision <- downloadHandler(
+    filename = function(){"step4_precisionSimOutput.csv"},
+    content = function(fname){
+      write.csv(bind_cols(simType = "precision", simResult()$precision.sim$DU_sim), fname, row.names = FALSE)
+    }
+  )
 }
 
 shinyApp(ui = ui, server = server)
