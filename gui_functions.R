@@ -22,7 +22,7 @@ step1_plot <- function(step1.output){
                   ifelse(frcAct>0, "above", "below"), 
                   " action level",
                   sep = ""),) + 
-    ylim(c(0,100)) +
+    ylim(c(0, 100)) +
     theme_article() +
     theme(legend.position = c(0.95,0.95),
           legend.justification = c(1,1),

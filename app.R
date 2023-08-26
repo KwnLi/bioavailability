@@ -34,13 +34,13 @@ ui <- fluidPage(
         # total concentration sample input
         conditionalPanel(
           condition = "input.step == 1 | input.step == 2",
-          numericInput("tot.n", "# of samples to be analyzed for total metal concentration", 5)
+          numericInput("tot.n", "# of samples to be analyzed for total metal concentration", 5, min = 1)
         ),
         
         # IVBA sample input
         conditionalPanel(
           condition = "input.step == 1 | input.step == 2",
-          numericInput("ivba.n", "# of samples to be analyzed for IVBA", 3)
+          numericInput("ivba.n", "# of samples to be analyzed for IVBA", 3, min = 1)
         ),
         
         # composite
@@ -92,7 +92,7 @@ ui <- fluidPage(
           h4("Step 2 Input"),
           HTML("<i>*Simulation range above/below action level:</i>"),
           numericInput("minFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Minimum (%):"), value = 0, step = 10, min = 0),
-          numericInput("maxFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Maximum (%):"), value = 50, step = 10, min = 0),
+          numericInput("maxFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Maximum (%):"), value = 25, step = 10, min = 0),
           numericInput("numbins", label = div(style = "font-weight: normal; font-style: italic", "Simulation intervals"), value = 10, min = 1)
         ),
         
@@ -484,8 +484,8 @@ server <- function(input, output, session){
     })
   output$simTable <- renderTable({
     if(input$step > 2){
-      data.frame(`Model input` = c("Assumed true EPC (mg bioavailable Pb per kg)",
-                                   "Assumed true EPC (relative to the AL)",
+      data.frame(`Model input` = c("Assumed true EPC (relative to the AL)",
+                                   "Assumed true EPC (mg bioavailable Pb per kg)",
                                    "CoV in total Pb across the DU ",
                                    "CoV in % RBA across the DU",
                                    "Estimated mean % RBA"),
