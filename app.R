@@ -16,7 +16,11 @@ ui <- fluidPage(
         title = "Sample params",
         h4("Step selection"),
         selectInput("step", "Select step:", 
-                    choices = c(`Step 1` = "1", `Step 2` = "2", `Step 3` = "3", `Step 4` = "4")),
+                    choices = c(`Step 1A` = "5", 
+                                `Step 1B` = "1",
+                                `Step 2` = "2", 
+                                `Step 3` = "3", 
+                                `Step 4` = "4")),
         # radioButtons("AsPb", "Select contaminant", choices = c(Pb = "Pb", As = "As"), inline=TRUE),
        
         hr(),
@@ -33,13 +37,13 @@ ui <- fluidPage(
         
         # total concentration sample input
         conditionalPanel(
-          condition = "input.step == 1 | input.step == 2",
+          condition = "input.step == 1 | input.step == 2 | input.step == 5",
           numericInput("tot.n", "# of samples to be analyzed for total metal concentration", 5, min = 1)
         ),
         
         # IVBA sample input
         conditionalPanel(
-          condition = "input.step == 1 | input.step == 2",
+          condition = "input.step == 1 | input.step == 2 | input.step == 5",
           numericInput("ivba.n", "# of samples to be analyzed for IVBA", 3, min = 1)
         ),
         
@@ -69,10 +73,13 @@ ui <- fluidPage(
         
         ##### Step 1 GUI #####
         conditionalPanel(
-          condition = "input.step == 1",
+          condition = "input.step == 1 | input.step == 5",
           h4("Step 1 Input"),
-          numericInput("sampmax", label = "Maximum number of samples to simulate:", value = 10, min = 2),
-          textInput("incr.vec", "List of composite increment numbers to test, separated by commas (1=discrete sampling)"),
+          conditionalPanel(
+            condition = "input.step == 1",
+            numericInput("sampmax", label = "Maximum number of samples to simulate:", value = 10, min = 2),
+            textInput("incr.vec", "List of composite increment numbers to test, separated by commas (1=discrete sampling)")
+          ),
           radioButtons("abs_frcAct", "Assumed level of soil contamination to simulate (expressed in terms of %)", 
                        choices = c(`+/-25% action level` = 0.25, 
                                    "Custom"), 
@@ -118,6 +125,21 @@ ui <- fluidPage(
         ),
         
         hr(),
+        
+        conditionalPanel(
+          condition = "input.step < 3",
+          h4("Error threshold"),
+          sliderInput("type1error", label = "Type 1 error threshold (%)",
+                      value = 5, step = 0.5,
+                      min = 0, max = 100,
+                      round = TRUE),
+          sliderInput("type2error", label = "Type 2 error threshold (%)",
+                      value = 20, step = 0.5,
+                      min = 0, max = 100,
+                      round = TRUE),
+          
+          hr(),
+        ),
         
         conditionalPanel(
           condition = "input.step != 3",
@@ -198,24 +220,20 @@ ui <- fluidPage(
       id = "resultsTabs",
       type = "tabs",
       tabPanel("Error Results",
-               # h3(textOutput("resultTitle")),
+               h3(textOutput("titleText")),
                br(),
-               conditionalPanel(condition = "input.step > 2", 
-                                tableOutput("simTable"),
-                                tableOutput("simIntTable"),
-                                htmlOutput("simIntTableText")
-               ),
-               conditionalPanel(condition = "input.step != 3",
-                                plotOutput("errorSimPlot")
-                                ),
-               conditionalPanel(condition = "input.step == 2", 
-                                htmlOutput("step2TextType1"),
-                                htmlOutput("step2TextType2")
-               ),
-               conditionalPanel(condition = "input.step == 4",
-                                htmlOutput("accuracyText"),
-                                htmlOutput("precisionText")
-                                )
+               tableOutput("simTable"),
+               tableOutput("simIntTable"),
+               htmlOutput("simIntTableText"),
+               plotOutput("step1aPlot"),
+               plotOutput("step1Plot"),
+               plotOutput("step2Plot"),
+               plotOutput("step4Plot"),
+               htmlOutput("step1aText"),
+               htmlOutput("step2TextType1"),
+               htmlOutput("step2TextType2"),
+               htmlOutput("accuracyText"),
+               htmlOutput("precisionText")
                ),
       tabPanel(
         title = "Download",
@@ -262,7 +280,7 @@ server <- function(input, output, session){
            as.numeric(input$mn_rba))
   })
   observe({
-    comp.choice = input$composite
+    comp.choice <- input$composite
     if(comp.choice==FALSE){
       updateNumericInput(session, "incr", value = 1)
     }else{
@@ -278,18 +296,52 @@ server <- function(input, output, session){
   #   }
   # })
   observe({
-    minFrcAct = input$minFrcAct
-    maxFrcAct = input$maxFrcAct
+    minFrcAct <- input$minFrcAct
+    maxFrcAct <- input$maxFrcAct
     updateNumericInput(session, "minFrcAct", max = maxFrcAct)
     updateNumericInput(session, "maxFrcAct", min = minFrcAct)
   })
   
-  # when simulate button is pressed
-  simResult <- eventReactive(input$go, {
-
+  # create holders for results
+  simResult <- reactiveValues(
+    step1a = NULL,
+    step1b = NULL,
+    step2 = NULL,
+    step3 = NULL,
+    step4 = NULL,
+    stepRun = 0   # 0 = no step run yet
+  )
+  
+  # toggle plots on/off depending on whether there are results contained in them
+  observe({
+    toggle(id = "step1Plot", condition = simResult$stepRun == 1)
+    toggle(id = "step2Plot", condition = simResult$stepRun == 2)
+    toggle(id = "step4Plot", condition = simResult$stepRun == 4)
+    toggle(id = "simTable", condition =  simResult$stepRun > 2)
+    toggle(id = "simIntTable", condition =  simResult$stepRun > 2)
+    toggle(id = "simIntTableText", condition =  simResult$stepRun > 2)
+    toggle(id = "step2TextType1", condition =  simResult$stepRun == 2)
+    toggle(id = "step2TextType2", condition =  simResult$stepRun == 2)
+    toggle(id = "step1aPlot", condition = simResult$stepRun == 5)
+    toggle(id = "step1aText", condition =  simResult$stepRun == 5)
+  })
+  
+  ##### WHEN THE SIMULATE BUTTON IS PRESSED #####
+  observeEvent(input$go, {
+    
+    # reset results when button is pressed
+    simResult$step1a <- NULL
+    simResult$step1b <- NULL
+    simResult$step2 <- NULL
+    simResult$step3 <- NULL
+    simResult$step4 <- NULL
+    
+    # reset the step number
+    simResult$stepRun <- 0
+    
     if(input$step == 1){
-      ##### Step 1 #####
-      withProgress(
+      ##### Step 1B #####
+      simResult$step1b <- withProgress(
         message = "Running step 1 simulations", value = 0,{
           incProgress(1/3, detail = "Simulating type I error")
           incr.vec <- as.numeric(strsplit(input$incr.vec, split = ",")[[1]])
@@ -346,7 +398,7 @@ server <- function(input, output, session){
       )
     }else if(input$step == 2){
       ##### Step 2 #####
-      withProgress(
+      simResult$step2 <- withProgress(
         message = "Running step 2 simulations", value = 0,{
           incProgress(1/3, detail = "Simulating type I error")
           type1 <- step2(
@@ -402,9 +454,10 @@ server <- function(input, output, session){
           list(type1=type1, type2=type2)
         }
       )
-    }else if(input$step == 3){
+
+    }else if(input$step >= 3 & input$step < 5){
       ##### Step 3 #####
-      withProgress(
+      simResult$step3 <- withProgress(
         message = "Running step 3 simulations", value = 0,{
           meas.tot <- as.numeric(strsplit(input$meas.tot, split = ",")[[1]])
           meas.ivba <- as.numeric(strsplit(input$meas.ivba, split = ',')[[1]])
@@ -427,8 +480,9 @@ server <- function(input, output, session){
           return(step3result)
         }
       )
-    }else if(input$step == 4){
-      withProgress(
+    }
+    if(input$step == 4){
+      simResult$step4 <- withProgress(
         message = "Running step 4 simulations", value = 0,{
           meas.tot <- as.numeric(strsplit(input$meas.tot, split = ",")[[1]])
           meas.ivba <- as.numeric(strsplit(input$meas.ivba, split = ',')[[1]])
@@ -460,6 +514,73 @@ server <- function(input, output, session){
         }
       )
     }
+    if(input$step == 5){
+      simResult$step1a <- withProgress(
+        message = "Running step 1A simulations", value = 0,{
+          
+          step1aresult_above <- simDU(
+            AsPb = "Pb",  # restrict to Pb for manuscript
+            actLvl = input$actLvl,
+            actLvlRBA = input$actLvlRBA,
+            tot.n = as.numeric(input$tot.n),
+            ivba.n = as.numeric(input$ivba.n),
+            tot.incr = as.numeric(input$incr),
+            ivba.incr = as.numeric(input$incr),
+            useMeanTot = as.logical(input$useMeanTot),
+            useMeanIVBA = TRUE,
+            frcAct = abs_frcAct(),
+            coeV.tot = coeV_tot(),
+            coeV.rba = coeV_rba(),
+            mn.rba = mn_rba(),
+            error_tot = as.logical(input$error_tot),
+            error_ivb = as.logical(input$error_ivb),
+            error_ivb_cv = as.numeric(input$error_ivb_cv),
+            ivba_model = as.logical(input$ivba_model),
+            post_mean = as.logical(input$post_mean),
+            iter = input$iter,
+            dist_tot = input$dist_tot,
+            dist_rba = input$dist_rba,
+            outputLvl = 2
+          )
+          
+          incProgress(1/2, detail = "Simulating")
+          # browser()
+          step1aresult_below <- simDU(
+            AsPb = "Pb",  # restrict to Pb for manuscript
+            actLvl = input$actLvl,
+            actLvlRBA = input$actLvlRBA,
+            tot.n = as.numeric(input$tot.n),
+            ivba.n = as.numeric(input$ivba.n),
+            tot.incr = as.numeric(input$incr),
+            ivba.incr = as.numeric(input$incr),
+            useMeanTot = as.logical(input$useMeanTot),
+            useMeanIVBA = TRUE,
+            frcAct = -abs_frcAct(),
+            coeV.tot = coeV_tot(),
+            coeV.rba = coeV_rba(),
+            mn.rba = mn_rba(),
+            error_tot = as.logical(input$error_tot),
+            error_ivb = as.logical(input$error_ivb),
+            error_ivb_cv = as.numeric(input$error_ivb_cv),
+            ivba_model = as.logical(input$ivba_model),
+            post_mean = as.logical(input$post_mean),
+            iter = input$iter,
+            dist_tot = input$dist_tot,
+            dist_rba = input$dist_rba,
+            outputLvl = 2
+          )
+          
+          plot_s1_a <- step1a_plot(step1aresult_above)
+          plot_s1_b <- step1a_plot(step1aresult_below)
+          
+          return(list(above = step1aresult_above, below = step1aresult_below,
+                      viz_above = plot_s1_a, viz_below = plot_s1_b))
+        }
+      )
+    }
+    
+    # identify step run
+    simResult$stepRun <- input$step
   }
   ) # eventReactive
 
@@ -467,92 +588,131 @@ server <- function(input, output, session){
   onclick("go", runjs("window.scrollTo(0, 50)"))  # go back to top of window
   
   # outputs: display
-  output$errorSimPlot <- renderPlot({
-    if(input$step == 1){
-      s1_t1 <- step1_plot(simResult()$type1)
-      s1_t2 <- step1_plot(simResult()$type2)
+  output$titleText <- renderText({
+    titles <- data.frame(
+      step.number = 1:5,
+      title = c(
+        "Step 1B: Evaluate multiple sampling protocols (pre-sampling)",
+        "Step 2: Evaluate decision tolerance of preferred sampling protocol (pre-sampling)",
+        "Step 3: Evaluate simulation inputs (post-sampling)",
+        "Step 4: Estimate decision accuracy and precision (post-sampling)",
+        "Step 1A: Evaluate single sampling protocol (pre-sampling)"
+      )
+    )
+    titles[simResult$stepRun, "title"]
+  })
+  output$step1Plot <- renderPlot({
+    if(simResult$stepRun == 1){
+      s1_t1 <- step1_plot(simResult$step1b$type1, error_threshold = input$type1error)
+      s1_t2 <- step1_plot(simResult$step1b$type2, error_threshold = input$type2error)
       
       plot_grid(s1_t1, s1_t2)
-    }else if(input$step == 2){
-      s2_t1 <- step2_plot(simResult()$type1)
-      s2_t2 <- step2_plot(simResult()$type2)
+    }
+    })
+  output$step1aPlot <- renderPlot({
+    if(simResult$stepRun == 5){
+
+      plot_grid(simResult$step1a$viz_below[[1]], simResult$step1a$viz_above[[1]])
+    }
+  })
+  output$step1aText <- renderUI({
+    if(simResult$stepRun == 5){
+      HTML(paste(simResult$step1a$viz_below[[2]], 
+                 simResult$step1a$viz_above[[2]], sep = "<br/>"))
+    }
+  })
+  output$step2Plot <- renderPlot({
+    if(simResult$stepRun == 2){
+      s2_t1 <- step2_plot(simResult$step2$type1, error_threshold = input$type1error)
+      s2_t2 <- step2_plot(simResult$step2$type2, error_threshold = input$type2error)
       
       plot_grid(s2_t1, s2_t2)
-    }else if(input$step == 4){
-      step4_plot(simResult())$outplot
+    }
+    })
+  output$step4Plot <- renderPlot({
+    if(simResult$stepRun == 4){
+      step4_plot(simResult$step4)$outplot
     }
     })
   output$simTable <- renderTable({
-    if(input$step > 2){
+    if(simResult$stepRun > 2 & simResult$stepRun < 5){
       data.frame(`Model input` = c("Assumed true EPC (relative to the AL)",
                                    "Assumed true EPC (mg bioavailable Pb per kg)",
                                    "CoV in total Pb across the DU ",
                                    "CoV in % RBA across the DU",
                                    "Estimated mean % RBA"),
                  `Value inferred post-sampling based on sampling results` =
-                   c(simResult()$step3$meas.frcAct,
-                     simResult()$step3$meas.ba,
-                     simResult()$step3$coeV.tot,
-                     simResult()$step3$coeV.rba,
-                     simResult()$step3$mn.rba),
+                   c(simResult$step3$step3$meas.frcAct,
+                     simResult$step3$step3$meas.ba,
+                     simResult$step3$step3$coeV.tot,
+                     simResult$step3$step3$coeV.rba,
+                     simResult$step3$step3$mn.rba),
                  check.names = FALSE
                  )
     }
   })
   output$simIntTable <- renderTable({
-    if(input$step > 2){
+    if(simResult$stepRun > 2 & simResult$stepRun < 5){
       data.frame(`Intermediete values used to derive updated model inputs` = 
                    c("S.D. in total Pb across composites*",
                      "S.D. in % RBA across composites*"),
                  `Value inferred post-sampling based on sampling results` =
-                   c(simResult()$step3$sd.tot,
-                     simResult()$step3$sd.rba),
+                   c(simResult$step3$step3$sd.tot,
+                     simResult$step3$step3$sd.rba),
                  check.names = FALSE
       )
     }
   })
   output$simIntTableText <- renderText({
-    if("step3" %in% names(simResult())){
+    if(simResult$stepRun == 3){
       "* S.D. observed across X composites converted to CoV in total Pb or % RBA using the following equation: S.D. (sample increments )= S.D. (observed across N composites ) x  √(# increments)"
     }
   })
   # output$errorText <- renderUI({HTML(simText(simResult()[[1]]))})
   output$accuracyText <- renderUI({
-    HTML(step4_plot(simResult())$accuracyText)
+    if(simResult$stepRun == 4){
+      HTML(step4_plot(simResult$step4)$accuracyText)
+    }
     })
   output$precisionText <- renderUI({
-    HTML(step4_plot(simResult())$precisionText)
+    if(simResult$stepRun == 4){
+      HTML(step4_plot(simResult$step4)$precisionText)
+    }
   })
   output$step2TextType1 <- renderUI({
-    HTML(step2_text(simResult()$type1, simResult()$type2)$type1)
+    if(simResult$stepRun == 2){
+      HTML(step2_text_t1(simResult$step2$type1, error_threshold = input$type1error))
+    }
   })
   output$step2TextType2 <- renderUI({
-    HTML(step2_text(simResult()$type1, simResult()$type2)$type2)
+    if(simResult$stepRun == 2){
+      HTML(step2_text_t2(simResult$step2$type2, error_threshold = input$type2error))
+    }
   })
   
   # outputs: download data
   output$dlStep1 <- downloadHandler(
     filename = function(){"step1_simOutput.csv"},
     content = function(fname){
-      write.csv(bind_rows(simResult(), .id = "errorType"), fname, row.names = FALSE)
+      write.csv(bind_rows(simResult$step1, .id = "errorType"), fname, row.names = FALSE)
     }
   )
   output$dlStep2 <- downloadHandler(
     filename = function(){"step2_simOutput.csv"},
     content = function(fname){
-      write.csv(bind_rows(simResult(), .id = "errorType"), fname, row.names = FALSE)
+      write.csv(bind_rows(simResult$step2, .id = "errorType"), fname, row.names = FALSE)
     }
   )
   output$dlStep4_accuracy <- downloadHandler(
     filename = function(){"step4_accuracySimOutput.csv"},
     content = function(fname){
-      write.csv(bind_cols(simType = "accuracy", simResult()$accuracy.sim$DU_sim), fname, row.names = FALSE)
+      write.csv(bind_cols(simType = "accuracy", simResult$step4$accuracy.sim$DU_sim), fname, row.names = FALSE)
     }
   )
   output$dlStep4_precision <- downloadHandler(
     filename = function(){"step4_precisionSimOutput.csv"},
     content = function(fname){
-      write.csv(bind_cols(simType = "precision", simResult()$precision.sim$DU_sim), fname, row.names = FALSE)
+      write.csv(bind_cols(simType = "precision", simResult$step4$precision.sim$DU_sim), fname, row.names = FALSE)
     }
   )
 }
