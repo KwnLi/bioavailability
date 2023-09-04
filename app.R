@@ -8,7 +8,7 @@ ui <- fluidPage(
   titlePanel("Simulate error in bioavailability estimation"),
   h4("Four step version"),
   helpText("For manuscript"),
-  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Aug 13, 2023")),
+  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Sept 3, 2023")),
 
   sidebarPanel(
     tabsetPanel(
