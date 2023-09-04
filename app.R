@@ -340,6 +340,7 @@ server <- function(input, output, session){
     simResult$stepRun <- 0
     
     if(input$step == 1){
+      validate(need(input$incr.vec, "Provide sampling increments to test.")) # doesn't work as expected
       ##### Step 1B #####
       simResult$step1b <- withProgress(
         message = "Running step 1 simulations", value = 0,{
