@@ -7,7 +7,7 @@ ui <- fluidPage(
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
   titlePanel("Simulate error in bioavailability estimation"),
   h4("Four-step version"),
-  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Oct. 29, 2023")),
+  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Nov. 2, 2023")),
 
   sidebarPanel(
     tabsetPanel(
@@ -238,7 +238,9 @@ ui <- fluidPage(
                htmlOutput("step2TextType1"),
                htmlOutput("step2TextType2"),
                htmlOutput("accuracyText"),
-               htmlOutput("precisionText")
+               htmlOutput("precisionText"),
+               br(),
+               htmlOutput("bottomNotes")
                ),
       tabPanel(
         title = "Download",
@@ -330,6 +332,7 @@ server <- function(input, output, session){
     toggle(id = "step2TextType2", condition =  simResult$stepRun == 2)
     toggle(id = "step1aPlot", condition = simResult$stepRun == 5)
     toggle(id = "step1aText", condition =  simResult$stepRun == 5)
+    toggle(id = "bottomNotes", condition = simResult$stepRun != 0)
   })
   
   ##### WHEN THE SIMULATE BUTTON IS PRESSED #####
@@ -619,7 +622,7 @@ server <- function(input, output, session){
   output$step1bText <- renderUI({
     if(simResult$stepRun == 1){
       HTML(
-        "* X-axis sample number listed is based on the number of samples analyzed for total metal concentration, adding one additional sample incrementally (X+1). If the input number of samples analyzed for IVBA was different than that for totals, then the number of samples listed on the x-axis would not represent IVBA sample number. For example, if the sampling protocol originally input was 5 samples analyzed for totals and 3 samples analyzed for IVBA, then the left most data point would represent 5 samples for totals and 3 samples for IVBA, and each incremental data point would represent X+1 samples analyzed for totals and IVBA respectively."
+        "** X-axis sample number listed is based on the number of samples analyzed for total metal concentration, adding one additional sample incrementally (X+1). If the input number of samples analyzed for IVBA was different than that for totals, then the number of samples listed on the x-axis would not represent IVBA sample number. For example, if the sampling protocol originally input was 5 samples analyzed for totals and 3 samples analyzed for IVBA, then the left most data point would represent 5 samples for totals and 3 samples for IVBA, and each incremental data point would represent X+1 samples analyzed for totals and IVBA respectively."
       )
     }
   })
@@ -653,13 +656,13 @@ server <- function(input, output, session){
       isolate(
         data.frame(`Model input` = c(
           paste0("Measured EPC (mg bioavailable ", input$AsPb, " per kg)"),
-          "Measured EPC (relative to the AL)",
+          "Measured EPC (% above/below the AL)",
           paste0("CoV in total ", input$AsPb, " across the DU "),
           "CoV in % RBA across the DU",
           "Estimated mean % RBA"),
           `Value inferred post-sampling based on sampling results` =
             c(simResult$step3$step3$meas.ba,
-              simResult$step3$step3$meas.frcAct,
+              100*simResult$step3$step3$meas.frcAct,
               simResult$step3$step3$coeV.tot,
               simResult$step3$step3$coeV.rba,
               simResult$step3$step3$mn.rba),
@@ -672,7 +675,7 @@ server <- function(input, output, session){
     if(simResult$stepRun > 2 & simResult$stepRun < 5){
       isolate(
         data.frame(`Intermediete values used to derive updated model inputs` = 
-                     c(paste0("S.D. in total ", input$AsPb, " across composites*"),
+                     c(paste0("S.D. in total ", input$AsPb, " across composites**"),
                        "S.D. in % RBA across composites*"),
                    `Value inferred post-sampling based on sampling results` =
                      c(simResult$step3$step3$sd.tot,
@@ -686,7 +689,7 @@ server <- function(input, output, session){
     if(simResult$stepRun == 3){
       isolate(
         paste0(
-          "* S.D. observed across X composites converted to CoV in total ",
+          "** S.D. observed across X composites converted to CoV in total ",
           input$AsPb, 
           " or % RBA using the following equation: S.D. (sample increments )= S.D. (observed across N composites ) x  √(# increments)")
       )
@@ -712,6 +715,20 @@ server <- function(input, output, session){
     if(simResult$stepRun == 2){
       HTML(step2_text_t2(simResult$step2$type2, error_threshold = input$type2error))
     }
+  })
+  output$bottomNotes <- renderUI({
+    HTML("<b>Notes:</b>
+    <br/><i>EPC</i> = Exposure Point Concentration*
+    <br/><i>DU</i> = Decision Unit
+    <br/><i>AL</i> = Action Level
+    <br/>* Here, the EPC is defined as the bioavailability-adjusted soil metal 
+    concentration (i.e., the total metal concentration (mg/kg) x % RBA), 
+    which is compared to an action level that has not been adjusted for 
+    bioavailability. In cases where a % RBA value other than 100% was input 
+    in the Assumed RBA of the action level field when defining the action level, 
+    the tool converts the RBA-adjusted action level to an action level that has 
+    not been adjusted for RBA by multiplying the user input action level by the 
+    user input assumed RBA of the action level (%).")
   })
   
   # outputs: download data

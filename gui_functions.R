@@ -14,14 +14,15 @@ step1_plot <- function(step1.output, error_threshold){
   ggplot(step1results,
          aes(x = n_tot, y = err_pb*100, color = aggregation)) + 
     geom_line() + geom_point() + 
-    xlab("Num. samples analyzed") + 
+    xlab("Number of samples") + 
     ylab(paste("Probability of", errortype, "error", sep = " ")) +
     geom_hline(yintercept = error_threshold, color = "red") + 
-    ggtitle(paste(errortype, " error with more sampling, when true \nbioavailable ", step1.output$AsPb, " is ",
+    ggtitle(paste(errortype, " error with more sampling, when \ntrue bioavailable ", step1.output$AsPb, " is ",
                   round(abs(frcAct*100),1), "% ", 
                   ifelse(frcAct>0, "above", "below"), 
                   " action level",
                   sep = ""),) + 
+    guides(color = guide_legend(title = "Aggregation**")) + 
     ylim(c(0, 100)) +
     theme_article() +
     theme(legend.position = c(0.95,0.95),
@@ -78,14 +79,14 @@ step1a_plot <- function(step1a.output){
                            pattern_density = 0.1,
                            pattern_spacing = 0.01,) + 
     theme_article() +
-    geom_vline(data = data.frame(threshold = c("Assumed EPC", "Action level"),
+    geom_vline(data = data.frame(threshold = c("Assumed true EPC", "Action level"),
                                  value = c(measured.EPC, action.level)),
                mapping = aes(xintercept = value, linetype = threshold, color = threshold), 
                linewidth = 0.8, key_glyph = "path") +
     scale_linetype_manual(values = c(1, 2)) +
     scale_color_manual(values = c("red", "blue")) +
     labs(linetype = "", color = "") +
-    xlab(paste0("Model-estimated assumed true EPC (mg kg-1)\nacross ",
+    xlab(paste0("Model-estimated measured EPC (mg kg-1)\nacross ",
                 sim_ct, " model iterations")) +
     theme(axis.text = element_text( size = 14 ),
           axis.title = element_text( size = 16, face = "bold" ),
@@ -98,13 +99,15 @@ step1a_plot <- function(step1a.output){
            "<b>False compliance decision error probability = ", 
            "<b>False exceedance decision error probability = "
            ),
-    round(100-(100*correct_ct/sim_ct), 1), "%:</b> ",
-    "When the simulated mean EPC is ",
+    round(100-(100*correct_ct/sim_ct), 1), "% (",
+    sim_ct-correct_ct, " out of ", sim_ct,
+    " simulations):</b> ",
+    "When the assumed true EPC is ",
     abs(round(100*step1a.output$err_pb$frcAct, 1)),
     "% ", ifelse(measured.EPC < action.level, "less than", "greater than"),
     " the action level, ",
     round(100*correct_ct/sim_ct, 1), 
-    "% of the simulated measured bioavailability-adjusted EPCs (i.e., ",
+    "% of the simulated measured EPCs (i.e., ",
     correct_ct, " out of ", sim_ct, " simulations) are ", 
     ifelse(measured.EPC < action.level, "less than", "greater than"), 
     " the action level."
@@ -293,7 +296,8 @@ step4_plot <- function(step4.output){
     "% of the simulated measured bioavailability-adjusted EPCs (i.e., ",
     precision_ct, " out of ", sim_ct, " simulations) are ", 
     ifelse(error.type == "False compliance", "greater than", "less than"), 
-    " the AL assuming the DU's true EPC equals the measured EPC.", sep = ""
+    " the AL assuming the measured EPC (from sampling) is the mean measured EPC if you were to repeat sampling ",
+    sim_ct, " times.", sep = ""
   )
   
   return(list(outplot = outplot, accuracyText = accuracyText, precisionText = precisionText))
