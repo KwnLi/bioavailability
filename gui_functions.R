@@ -17,7 +17,7 @@ step1_plot <- function(step1.output, error_threshold){
     xlab("Number of samples") + 
     ylab(paste("Probability of", errortype, "error", sep = " ")) +
     geom_hline(yintercept = error_threshold, color = "red") + 
-    ggtitle(paste(errortype, " error with more sampling, when \ntrue bioavailable ", step1.output$AsPb, " is ",
+    ggtitle(paste(errortype, " error with more sampling, \nwhen true EPC ", step1.output$AsPb, " is ",
                   round(abs(frcAct*100),1), "% ", 
                   ifelse(frcAct>0, "above", "below"), 
                   " action level",
@@ -88,16 +88,23 @@ step1a_plot <- function(step1a.output){
     labs(linetype = "", color = "") +
     xlab(paste0("Model-estimated measured EPC (mg kg-1)\nacross ",
                 sim_ct, " model iterations")) +
+    ggtitle(
+      ifelse(measured.EPC < action.level,
+             "False exceedance decision error probability", 
+             "False compliance decision error probability"
+      )
+    ) +
     theme(axis.text = element_text( size = 14 ),
           axis.title = element_text( size = 16, face = "bold" ),
           strip.text = element_text(size = 20),
           legend.text=element_text(size = 14),
+          plot.title = element_text(size = 20),
           legend.position = "top")
   
   outputText <- paste0(
     ifelse(measured.EPC < action.level,
-           "<b>False compliance decision error probability = ", 
-           "<b>False exceedance decision error probability = "
+           "<b>False exceedance decision error probability = ", 
+           "<b>False compliance decision error probability = "
            ),
     round(100-(100*correct_ct/sim_ct), 1), "% (",
     sim_ct-correct_ct, " out of ", sim_ct,

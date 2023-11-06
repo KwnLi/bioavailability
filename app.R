@@ -7,7 +7,7 @@ ui <- fluidPage(
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
   titlePanel("Simulate error in bioavailability estimation"),
   h4("Four-step version"),
-  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Nov. 2, 2023")),
+  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Nov. 6, 2023")),
 
   sidebarPanel(
     tabsetPanel(
@@ -629,13 +629,14 @@ server <- function(input, output, session){
   output$step1aPlot <- renderPlot({
     if(simResult$stepRun == 5){
 
-      plot_grid(simResult$step1a$viz_below[[1]], simResult$step1a$viz_above[[1]])
+      plot_grid(simResult$step1a$viz_above[[1]], simResult$step1a$viz_below[[1]])
     }
   })
   output$step1aText <- renderUI({
     if(simResult$stepRun == 5){
-      HTML(paste(simResult$step1a$viz_below[[2]], 
-                 simResult$step1a$viz_above[[2]], sep = "<br/>"))
+      HTML(paste(simResult$step1a$viz_above[[2]], 
+                 simResult$step1a$viz_below[[2]], 
+                 sep = "<br/>"))
     }
   })
   output$step2Plot <- renderPlot({
