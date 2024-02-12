@@ -16,7 +16,10 @@ step1_plot <- function(step1.output, error_threshold){
     geom_line() + geom_point() + 
     xlab("Number of samples") + 
     ylab(paste("Probability of", errortype, "error", sep = " ")) +
-    geom_hline(yintercept = error_threshold, color = "red") + 
+    geom_hline(yintercept = error_threshold, color = "black") + 
+    annotate("text", x=max(step1results$n_tot), y=error_threshold + 2,
+             label="Error prob. objective",
+             hjust=1, fontface="italic") + 
     ggtitle(paste(errortype, " error with more sampling, \nwhen true EPC ", step1.output$AsPb, " is ",
                   round(abs(frcAct*100),1), "% ", 
                   ifelse(frcAct>0, "above", "below"), 
@@ -117,7 +120,18 @@ step1a_plot <- function(step1a.output){
     "% of the simulated measured EPCs (i.e., ",
     correct_ct, " out of ", sim_ct, " simulations) are ", 
     ifelse(measured.EPC < action.level, "less than", "greater than"), 
-    " the action level."
+    " the action level, leading to the correct assessment that the EPC is ",
+    ifelse(measured.EPC < action.level, "below", "above"),
+    " the action level. ", 
+    round(100-(100*correct_ct/sim_ct), 1), "% of the simulated measured EPCs (",
+    sim_ct-correct_ct, " out of ", sim_ct, 
+    " simulations) lead to the incorrect assessment that the EPC is ", 
+    ifelse(measured.EPC < action.level, "above", "below"),
+    " the action level, resulting in a ", 
+    ifelse(measured.EPC < action.level,
+           "false exceedance decision error.", 
+           "false compliance decision error."
+    )
   )
   
   return(list(outplot, outputText))
@@ -290,21 +304,29 @@ step4_plot <- function(step4.output){
           legend.text=element_text(size = 14),
           legend.position = "top")
   
-  accuracyText <- paste(
+  accuracyText <- paste0(
     "<b>Accuracy:</b> ", round(100*accuracy_ct/sim_ct, 1), 
     "% of the simulated measured bioavailability-adjusted EPCs (i.e., ",
     accuracy_ct, " out of ", sim_ct, " simulations) are ", 
     ifelse(error.type == "False compliance", "less than", "greater than"), 
-    " the observed EPC assuming the DU's true EPC equals the AL.", sep = ""
+    " the observed EPC assuming the DU's true EPC equals the AL.", 
+    " Simulation results, therefore, estimate that there is a <=",
+    round(100*accuracy_ct/sim_ct, 1), "% probability that the measured EPC observed from sampling came from a decision unit with a true EPC ",
+    ifelse(error.type == "False compliance", ">=", "<="), " the AL."
   )
   
-  precisionText <- paste(
+  precisionText <- paste0(
     "<b>Precision:</b> ", round(100*precision_ct/sim_ct, 1),
     "% of the simulated measured bioavailability-adjusted EPCs (i.e., ",
     precision_ct, " out of ", sim_ct, " simulations) are ", 
     ifelse(error.type == "False compliance", "greater than", "less than"), 
     " the AL assuming the measured EPC (from sampling) is the mean measured EPC if you were to repeat sampling ",
-    sim_ct, " times.", sep = ""
+    sim_ct, " times. ",
+    "The tool, therefore, estimates that there is a ", round(100*precision_ct/sim_ct, 1),
+    "% probability that resampling, using the same resampling plan, would lead to a different assessment of the EPC relative to the AL (in this case that the EPC is ",
+    ifelse(error.type == "False compliance", ">", "<"), " the AL). ",
+    "Again, this assumes that the measured EPC is the mean EPC that would be observed if sampling were repeated ",
+    sim_ct, " times."
   )
   
   return(list(outplot = outplot, accuracyText = accuracyText, precisionText = precisionText))

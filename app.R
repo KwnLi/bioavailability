@@ -97,8 +97,8 @@ ui <- fluidPage(
           condition = "input.step == 2",
           h4("Step 2 Input"),
           HTML("<i>*Simulation range above/below action level:</i>"),
-          numericInput("minFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Minimum (%):"), value = 0, step = 10, min = 0),
-          numericInput("maxFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Maximum (%):"), value = 25, step = 10, min = 0),
+          numericInput("minFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Minimum (%):"), value = 0, min = 0),
+          numericInput("maxFrcAct", label = div(style = "font-weight: normal; font-style: italic", "Maximum (%):"), value = 25, min = 0),
           numericInput("numbins", label = div(style = "font-weight: normal; font-style: italic", "Simulation intervals"), value = 10, min = 1)
         ),
         
