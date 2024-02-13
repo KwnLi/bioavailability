@@ -220,19 +220,22 @@ ui <- fluidPage(
   ),
   
   mainPanel(
+    # tags$head(tags$style(HTML('#resultsTabs {width: 850px;}'))),
     tabsetPanel(
       id = "resultsTabs",
       type = "tabs",
       tabPanel("Error Results",
+               id="errorResults",
                h3(textOutput("titleText")),
                br(),
                tableOutput("simTable"),
                tableOutput("simIntTable"),
                htmlOutput("simIntTableText"),
-               plotOutput("step1aPlot"),
-               plotOutput("step1Plot"),
-               plotOutput("step2Plot"),
-               plotOutput("step4Plot"),
+               plotOutput("step1aPlot", width = "840px"),
+               plotOutput("step1Plot", width = "840px"),
+               plotOutput("step2Plot", width = "840px"),
+               plotOutput("step4Plot", width = "840px"),
+               br(),
                htmlOutput("step1bText"),
                htmlOutput("step1aText"),
                htmlOutput("step2TextType1"),
@@ -240,7 +243,18 @@ ui <- fluidPage(
                htmlOutput("accuracyText"),
                htmlOutput("precisionText"),
                br(),
-               htmlOutput("bottomNotes")
+               htmlOutput("bottomNotes"),
+               br(),
+               h5("Disclaimers:"),
+               HTML("<ul><li>Use of this tool requires assumptions that may not be accurate
+               <li>The tool estimates false compliance and false exceedance decision 
+               error probability based primarily on uncertainty in a) representativeness 
+               of samples collected with respect to average conditions across the 
+               geographic scale of the decision unit and b) analytical measurements of 
+               total metal concentration and % IVBA. Other factors not considered by the 
+               simulation model may impact decision error probability, including but not 
+               limited to uncertainty in the EPA validated methods used to convert 
+               measurements of soil PB or As IVBA to RBA.</li><ul>")
                ),
       tabPanel(
         title = "Download",
@@ -622,7 +636,16 @@ server <- function(input, output, session){
   output$step1bText <- renderUI({
     if(simResult$stepRun == 1){
       HTML(
-        "** X-axis sample number listed is based on the number of samples analyzed for total metal concentration, adding one additional sample incrementally (X+1). If the input number of samples analyzed for IVBA was different than that for totals, then the number of samples listed on the x-axis would not represent IVBA sample number. For example, if the sampling protocol originally input was 5 samples analyzed for totals and 3 samples analyzed for IVBA, then the left most data point would represent 5 samples for totals and 3 samples for IVBA, and each incremental data point would represent X+1 samples analyzed for totals and IVBA respectively."
+        "**<i>X-axis sample number listed is based on the number of samples 
+        analyzed for total metal concentration, adding one additional sample 
+        incrementally (X+1). If the input number of samples analyzed for IVBA 
+        was different than that for totals, then the number of samples listed 
+        on the x-axis would not represent IVBA sample number. For example, if 
+        the sampling protocol originally input was 5 samples analyzed for totals 
+        and 3 samples analyzed for IVBA, then the left most data point would 
+        represent 5 samples for totals and 3 samples for IVBA, and each incremental 
+        data point would represent X+1 samples analyzed for totals and IVBA 
+        respectively.</i>"
       )
     }
   })

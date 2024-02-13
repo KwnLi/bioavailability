@@ -31,9 +31,9 @@ step1_plot <- function(step1.output, error_threshold){
     theme(legend.position = c(0.95,0.95),
           legend.justification = c(1,1),
           axis.text = element_text( size = 14 ),
-          axis.title = element_text( size = 16, face = "bold" ),
+          axis.title = element_text( size = 16),
           legend.text=element_text(size = 14),
-          plot.title = element_text(size = 20)
+          plot.title = element_text(size = 16, face = "bold" )
     )
 }
 
@@ -98,10 +98,10 @@ step1a_plot <- function(step1a.output){
       )
     ) +
     theme(axis.text = element_text( size = 14 ),
-          axis.title = element_text( size = 16, face = "bold" ),
-          strip.text = element_text(size = 20),
+          axis.title = element_text( size = 16),
+          strip.text = element_text(size = 16),
           legend.text=element_text(size = 14),
-          plot.title = element_text(size = 20),
+          plot.title = element_text(size = 16, face = "bold" ),
           legend.position = "top")
   
   outputText <- paste0(
@@ -155,9 +155,9 @@ step2_plot <- function(step2.output, error_threshold){
     ylim(c(0,100)) +
     theme_article() +
     theme(axis.text = element_text( size = 14 ),
-          axis.title = element_text( size = 16, face = "bold" ),
+          axis.title = element_text( size = 16),
           legend.text=element_text(size = 14),
-          plot.title = element_text(size = 20)
+          plot.title = element_text(size = 16, face = "bold" )
           )
 }
 
