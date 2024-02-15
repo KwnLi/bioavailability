@@ -323,7 +323,7 @@ step4_plot <- function(step4.output){
     " the AL assuming the measured EPC (from sampling) is the mean measured EPC if you were to repeat sampling ",
     sim_ct, " times. ",
     "The tool, therefore, estimates that there is a ", round(100*precision_ct/sim_ct, 1),
-    "% probability that resampling, using the same resampling plan, would lead to a different assessment of the EPC relative to the AL (in this case that the EPC is ",
+    "% probability that resampling, using the same sampling plan, would lead to a different assessment of the EPC relative to the AL (in this case that the EPC is ",
     ifelse(error.type == "False compliance", ">", "<"), " the AL). ",
     "Again, this assumes that the measured EPC is the mean EPC that would be observed if sampling were repeated ",
     sim_ct, " times."
