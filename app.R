@@ -7,7 +7,7 @@ ui <- fluidPage(
   tags$head(tags$style(HTML("hr {border-top: 1px solid #707070;}"))),
   titlePanel("Simulate error in bioavailability estimation"),
   h4("Four-step version"),
-  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Feb. 15, 2024")),
+  helpText(div(style = "font-weight: normal; font-style: italic", "Updated Feb. 17, 2024")),
 
   sidebarPanel(
     tabsetPanel(

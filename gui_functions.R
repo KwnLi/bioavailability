@@ -122,7 +122,7 @@ step1a_plot <- function(step1a.output){
     ifelse(measured.EPC < action.level, "less than", "greater than"), 
     " the action level, leading to the correct assessment that the EPC is ",
     ifelse(measured.EPC < action.level, "below", "above"),
-    " the action level. ", 
+    " the action level; ", 
     round(100-(100*correct_ct/sim_ct), 1), "% of the simulated measured EPCs (",
     sim_ct-correct_ct, " out of ", sim_ct, 
     " simulations) lead to the incorrect assessment that the EPC is ", 
@@ -310,7 +310,7 @@ step4_plot <- function(step4.output){
     accuracy_ct, " out of ", sim_ct, " simulations) are ", 
     ifelse(error.type == "False compliance", "less than", "greater than"), 
     " the observed EPC assuming the DU's true EPC equals the AL.", 
-    " Simulation results, therefore, estimate that there is a <=",
+    " Therefore, there is a <=",
     round(100*accuracy_ct/sim_ct, 1), "% probability that the measured EPC observed from sampling came from a decision unit with a true EPC ",
     ifelse(error.type == "False compliance", ">=", "<="), " the AL."
   )
@@ -322,10 +322,10 @@ step4_plot <- function(step4.output){
     ifelse(error.type == "False compliance", "greater than", "less than"), 
     " the AL assuming the measured EPC (from sampling) is the mean measured EPC if you were to repeat sampling ",
     sim_ct, " times. ",
-    "The tool, therefore, estimates that there is a ", round(100*precision_ct/sim_ct, 1),
+    "Therefore, there is a ", round(100*precision_ct/sim_ct, 1),
     "% probability that resampling, using the same sampling plan, would lead to a different assessment of the EPC relative to the AL (in this case that the EPC is ",
     ifelse(error.type == "False compliance", ">", "<"), " the AL). ",
-    "Again, this assumes that the measured EPC is the mean EPC that would be observed if sampling were repeated ",
+    "This assumes that the measured EPC is the mean EPC that would be observed if sampling were repeated ",
     sim_ct, " times."
   )
   

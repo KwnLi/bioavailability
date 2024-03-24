@@ -5,10 +5,10 @@ account: kwnli
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 9598414
-bundleId: 8260538
+bundleId: 8266728
 url: https://kwnli.shinyapps.io/bioavailability_4steps/
-when: 1708027060.98822
-lastSyncTime: 1708027060.98823
+when: 1708180603.92348
+lastSyncTime: 1708180603.92349
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: www/readme_draft.docx|www/readme.pdf
