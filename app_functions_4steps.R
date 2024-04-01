@@ -1,117 +1,3 @@
-# package checking and installation
-# from: https://stackoverflow.com/questions/4090169/elegant-way-to-check-for-missing-packages-and-install-them
-# using<-function(...) {
-#   libs<-unlist(list(...))
-#   req<-unlist(lapply(libs,require,character.only=TRUE))
-#   need<-libs[req==FALSE]
-#   if(length(need)>0){
-#     install.packages(need)
-#     lapply(need,require,character.only=TRUE)
-#   }
-# }
-
-# using("shiny", "shinyjs", "cowplot", "ggplot2", "truncnorm", "dplyr", "ggpattern", "egg")
-
-library(shiny)
-library(shinyjs)
-library(cowplot)
-library(ggplot2)
-library(truncnorm)
-library(dplyr)
-library(ggpattern)
-library(egg)
-
-##### Custom lognormal #####
-# just a wrapper form the rlnorm that converts the normal mean and sd
-# inputs so that the output lognormal samples have the specified mean and sd
-# at the lognormal scale
-
-custom_rlnorm <- function(n, m, s){
-  location <- log(m^2 / sqrt(s^2 + m^2))
-  shape <- sqrt(log(1 + (s^2 / m^2)))
-  return(rlnorm(n=n, location, shape))
-}
-
-##### upper 95% conf. int. of the mean function #####
-upper95 <- function(x,lvl){
-  xbar = mean(x)
-  up95 = xbar + qnorm(lvl)*(sd(x)/sqrt(length(x)))
-  return(up95)
-}
-
-##### IVBA/RBA regressions #####
-
-# contains the regression parameters for the As and Pb IVBA functions
-contam_params <- list(
-  As = c(
-    sepred = 19/1.96, # from 95% prediction limit for a single As RBA measurement 
-    m = 0.79,         # from https://doi.org/10.1080/15287394.2015.1134038
-    b = 3
-  ),
-  Pb = c(
-    sepred = 32/1.96, # from 95% prediction limit for a single Pb RBA measurement 
-    m = 0.878,       # from OSWER 9285.7-77 (May 2007)
-    b = -2.81
-  )
-)
-
-# Inverse model to calculate observed IVBA from true RBA 
-fy_error <- function(
-    y, # "true" RBA
-    contaminant, # string, "As" or "Pb"
-    sepred = NULL
-){
-  m = contam_params[[contaminant]]["m"]
-  b = contam_params[[contaminant]]["b"]
-  sepred = ifelse(is.null(sepred), contam_params[[contaminant]]["sepred"], sepred)
-  
-  x = (y - rnorm(1,0,sepred) - b)/m
-  
-  return(max(0,x))
-}
-fy_error <- Vectorize(fy_error)
-
-# Inverse model to calculate observed IVBA from true RBA without model error
-fy <- function(
-    y, # "true" RBA
-    contaminant # string, "As" or "Pb"
-){
-  m = contam_params[[contaminant]]["m"]
-  b = contam_params[[contaminant]]["b"]
-  
-  x = (y - b)/m
-  
-  return(max(0,x))
-}
-fy <- Vectorize(fy)
-
-# Direct model, from mean measured IVBA to estimated RBA
-fx <- function(
-    x, # measured IVBA
-    contaminant # string, "As" or "Pb"
-){
-  m = contam_params[[contaminant]]["m"]
-  b = contam_params[[contaminant]]["b"]
-  
-  y = m*x+b
-  
-  return(y)
-}
-fx <- Vectorize(fx)
-
-##### Simulate DU #####
-
-# distribution parameters
-distParam <- list(
-  As = list(
-    coeV.rba = c(mn = 1.118799762, lvl95 = 0.452062439),
-    coeV.tot = c(mn = 0.452062439, lvl95 = 1.118799762)
-  ),
-  Pb = list(
-    coeV.rba = c(mn = 0.55, lvl95 = 0.95),
-    coeV.tot = c(mn = 1.12, lvl95 = 1.52)
-  )
-)
 
 # Function to generate "true" total conc.
 simDist_tot <- function(
@@ -128,7 +14,7 @@ simDist_tot <- function(
     stop(paste("Unrecognized distribution for total concentration: ",
                dist_tot, sep = ""))
   }
-  
+
 }
 
 # Function to generate "true" rba
@@ -160,7 +46,7 @@ take_samples <- function(
 ){
   n.cores <- n.sim*n.samp*n.incr
   simvalues <- do.call(distfun, args = append(n.cores, list(...)))
-  
+
   # long output
   out.long <- data.frame(
     sim.num = rep(seq(1:n.sim), each = n.samp*n.incr),
@@ -168,7 +54,7 @@ take_samples <- function(
     incr.num = rep(rep(seq(1:n.incr), times = n.samp)),
     sim.value = simvalues
   )
-  
+
   return(out.long)
 }
 
@@ -189,32 +75,32 @@ apply_meas_error <- function(
 ##### Simulate DU function #####
 simDU <- function(
   AsPb = NULL,        # "As" or "Pb"
-  
+
   # What is the site-specific soil contaminant action level?
   actLvl = 400,       # mg/kg  (action level: limit of biovalability above which site has to be remedied)
   actLvlRBA = 60,     # % RBA assumed in the action level
   frcAct = NULL,    # fraction of the action level threshold
-  
+
   # Use mean of upper 95% interval in estimation of total contaminant?
   useMeanTot = T,       # T = use the mean; F = use 95% interval
-  
+
   # Use mean or upper 95% interval in estimation of IVBA?
   useMeanIVBA = T,      # T = use the mean; F = use 95% interval
-  
+
   # sampling protocol inputs
   tot.n = NULL,   # how many total metal concentration samples?
   tot.incr = 1, # number of increments in total samples
-  
+
   ivba.n = NULL,  # how many samples analyzed for IVBA?
   ivba.incr = 1,# number of increments in ivba samples
-  
+
   # simulated DU parameters
   coeV.tot = NULL,
   coeV.rba = NULL,
   mn.rba = 60,
   dist_tot = "lognorm", # distribution of total concentration
   dist_rba = "normal",  # distribution of RBA
-  
+
   # simulation parameters
   custom_sepred = NULL, # custom sepred value, overrides defaults
   error_tot = FALSE,    # include total conc. measurement error?
@@ -223,7 +109,7 @@ simDU <- function(
   ivba_model = FALSE,   # include IVBA model error?
   post_mean = FALSE,    # calculate IVBA model error after summarizing across samples?
   iter = 1000,          # nr. simulations
-  
+
   # Output detail
   outputLvl = 1         # 1=just error rate and summary across sims
                         # 2=level1 + summary of each simulation
@@ -232,29 +118,29 @@ simDU <- function(
 ){
   # check that AsPb is defined
   if(is.null(AsPb)){stop("Contaminant is not defined for DU sim")}
-  
+
   # Adjusted action level
   actLvl.adj <- actLvl * (actLvlRBA/100)
-  
+
   # True total conc.
   tru_ba <- (frcAct*actLvl.adj) + actLvl.adj
   tru_mu_tot <- tru_ba/(mn.rba/100)
-  
+
   # True ivba
   tru_mu_ivb <- fy(mn.rba, contaminant = AsPb)
-  
+
   # simulate the DU
-  tot.sim.incr <- take_samples(tot.n, tot.incr, iter, 
-                             "simDist_tot", tru_mu_tot=tru_mu_tot, 
+  tot.sim.incr <- take_samples(tot.n, tot.incr, iter,
+                             "simDist_tot", tru_mu_tot=tru_mu_tot,
                              coeV_tot=coeV.tot, dist_tot=dist_tot)
-  rba.sim.incr <- take_samples(ivba.n, ivba.incr, iter, 
-                             "simDist_rba", tru_mu_rba=mn.rba, 
+  rba.sim.incr <- take_samples(ivba.n, ivba.incr, iter,
+                             "simDist_rba", tru_mu_rba=mn.rba,
                              coeV_rba=coeV.rba, dist_rba=dist_rba)
-  
+
   tot.sim.meas <- tot.sim.incr %>% group_by(sim.num, sample.num) %>%
     summarize(tru.tot = mean(sim.value), .groups = "drop") %>% # take composite
     mutate(meas.tot = apply_meas_error(tru.tot)) # apply measurement error
-  
+
   rba.sim.meas <- rba.sim.incr %>% group_by(sim.num, sample.num) %>%
     summarize(tru.rba = mean(sim.value), .groups = "drop") %>% # take composite
     mutate(tru.ivb = if(ivba_model & !post_mean){ # TRUE/FALSE if modeling ivba BEFORE taking mean
@@ -269,7 +155,7 @@ simDU <- function(
       tru.ivb
     }
     )
-  
+
   # take mean/95% UL of DU samples for each iteration
   DU.sim <- tot.sim.meas %>% group_by(sim.num) %>%
     summarize(
@@ -289,7 +175,7 @@ simDU <- function(
               upper95(meas.ivb, lvl=.975)
               }, .groups = "drop") %>%
         mutate(est_rba_DU = if(ivba_model & post_mean){  # TRUE/FALSE if modeling ivba AFTER taking mean
-          fx(est_ivb_DU, contaminant = AsPb) %>% # convert to rba 
+          fx(est_ivb_DU, contaminant = AsPb) %>% # convert to rba
             fy_error(contaminant = AsPb) %>%     # convert to ivba with model error
             fx(contaminant = AsPb)               # convert to rba again
         }else{
@@ -303,8 +189,8 @@ simDU <- function(
       }else{
         as.numeric(ba_DU>actLvl.adj)
       })
-  
-  err_pb <- DU.sim %>% 
+
+  err_pb <- DU.sim %>%
     summarize(
       n_tot = mean(n_tot),
       n_rba = mean(n_rba),
@@ -318,7 +204,7 @@ simDU <- function(
       tru_ivb = tru_mu_ivb,
       err_pb = mean(errYN)
       )
-  
+
   return(
   if(outputLvl == 1){
     list(err_pb = err_pb)
@@ -333,7 +219,7 @@ simDU <- function(
          increments = list(tot=tot.sim.incr, rba=rba.sim.incr))
   }
   )
-  
+
 }
 
 # test <- simDU(
@@ -363,16 +249,16 @@ step1 <- function(
   sampout <- length(seq(max(c(tot.n, ivba.n)), sampmax, by=1))
   tot.range <- seq(tot.n, by=1, length.out = sampout)
   ivba.range <- seq(ivba.n, by=1, length.out = sampout)
-  
+
   step1.out <- list()
-  
+
   for(h in 1:length(incr.vec)){
     step1.h <- list()
     for(i in 1:sampout){
       # progress message
-      print(paste("Simulating", tot.range[i], "total concentration samples and", 
+      print(paste("Simulating", tot.range[i], "total concentration samples and",
                   ivba.range[i], "IVBA samples, with", incr.vec[h], "increments", sep = " "))
-      
+
       step1.h[[i]] <- simDU(
         AsPb = AsPb,
         tot.n = tot.range[i],
@@ -385,7 +271,7 @@ step1 <- function(
     }
     step1.out[[h]] <- bind_rows(step1.h) %>% mutate(n_incr = incr.vec[h])
   }
-  
+
 
   return(list(step1 = bind_rows(step1.out), AsPb = AsPb))
 }
@@ -418,18 +304,18 @@ step2 <- function(
     ...                # simDU parameters
 ){
   if(minFrcAct*maxFrcAct < 0){stop("Min and max fraction of action level range cannot span zero")}
-  
+
   # make sure minFrcAct is less than maxFrcAct
   if(minFrcAct > maxFrcAct){
     tempval <- maxFrcAct
     maxFrcAct <- minFrcAct
     minFrcAct <- tempval
   }
-  
-  frcActRange <- round(seq(from = ifelse(minFrcAct>-1,minFrcAct,-0.99), 
-                                to = ifelse(maxFrcAct>-1,maxFrcAct,-0.01), 
+
+  frcActRange <- round(seq(from = ifelse(minFrcAct>-1,minFrcAct,-0.99),
+                                to = ifelse(maxFrcAct>-1,maxFrcAct,-0.01),
                                 length.out = numbins), 2)
-  
+
   err_pb <- list()
   simQt <- list()
   for(i in 1:length(frcActRange)){
@@ -445,15 +331,15 @@ step2 <- function(
       outputLvl = 2,
       ...
     )
-    
+
     err_pb[[i]] <- sim.i$err_pb
     simQt[[i]] <- quantile(sim.i$DU_sim$ba_DU, probs = c(0.05, 0.25, 0.50, 0.75, 0.95))
   }
-  
+
   simQt <- bind_rows(simQt) %>% rename_with(.fn = ~paste0("ba_sim_", .))
-  
+
   step2.out <- bind_rows(err_pb) %>% bind_cols(simQt)
-  
+
   return(list(step2 = step2.out, AsPb = AsPb))
 }
 
@@ -480,38 +366,38 @@ step3 <- function(
     meas.tot = NULL,      # actual total concentration measurements
     meas.ivba = NULL,     # actual ivba measurements
     AsPb = NULL,          # "As" or "Pb"
-    
+
     # Sampling protocol
     tot.incr = NULL,      # number of increments for total conc. samples
     ivba.incr = NULL,     # number of increments for ivb samples
-    
+
     # Use mean of upper 95% interval in estimation of total contaminant?
     useMeanTot = T,       # T = use the mean; F = use 95% interval
-    
+
     # What is the site-specific soil contaminant action level?
     actLvl = 400,       # mg/kg  (action level: limit of biovalability above which site has to be remedied)
     actLvlRBA = 60      # % RBA assumed in the action level
 ){
-  
+
   meas.rba <- fx(meas.ivba, contaminant = AsPb)
-    
+
   tot.n <- length(meas.tot)
   rba.n <- length(meas.rba)
-  
+
   mn.tot <- ifelse(useMeanTot, mean(meas.tot), upper95(meas.tot))
   mn.rba <- mean(meas.rba)
-  
+
   # coefficient of variation
   coeV.tot <- (sd(meas.tot)*sqrt(tot.incr))/mn.tot
   coeV.rba <- (sd(meas.rba)*sqrt(ivba.incr))/mn.rba
-  
+
   # Adjusted action level
   actLvl.adj <- actLvl * (actLvlRBA/100)
-  
+
   # True total conc.
   meas.ba <- mn.tot*(mn.rba/100)
   meas.frcAct <- (meas.ba - actLvl.adj)/actLvl.adj
-  
+
   step3.out <- list(
     meas.frcAct = meas.frcAct,
     meas.ba = meas.ba,
@@ -554,21 +440,21 @@ step4 <- function(
     meas.tot = NULL,      # actual total concentration measurements
     meas.ivba = NULL,     # actual ivba measurements
     AsPb = NULL,          # "As" or "Pb"
-    
+
     # Sampling protocol
     tot.incr = NULL,      # number of increments for total conc. samples
     ivba.incr = NULL,     # number of increments for ivb samples
-    
+
     # Use mean of upper 95% interval in estimation of total contaminant?
     useMeanTot = T,       # T = use the mean; F = use 95% interval
-    
+
     # What is the site-specific soil contaminant action level?
     actLvl = 400,       # mg/kg  (action level: limit of biovalability above which site has to be remedied)
     actLvlRBA = 60,     # % RBA assumed in the action level
-    
+
     ... # simDU inputs
 ){
-  
+
   meas.dist.param <- step3(meas.tot = meas.tot,
                            meas.ivba = meas.ivba,
                            AsPb = AsPb,
@@ -577,10 +463,10 @@ step4 <- function(
                            actLvl = actLvl,
                            actLvlRBA = actLvlRBA,
                            useMeanTot = useMeanTot)
-  
+
   accuracy.sim <- simDU(
     AsPb = AsPb, actLvl = actLvl, actLvlRBA = actLvlRBA,
-    frcAct = 0, 
+    frcAct = 0,
     tot.n = meas.dist.param$step3$tot.n, tot.incr = tot.incr,
     ivba.n = meas.dist.param$step3$rba.n, ivba.incr = ivba.incr,
     coeV.tot = meas.dist.param$step3$coeV.tot,
@@ -590,10 +476,10 @@ step4 <- function(
     outputLvl = 2,
     ...
   )
-  
+
   precision.sim <- simDU(
     AsPb = AsPb, actLvl = actLvl, actLvlRBA = actLvlRBA,
-    frcAct = meas.dist.param$step3$meas.frcAct, 
+    frcAct = meas.dist.param$step3$meas.frcAct,
     tot.n = meas.dist.param$step3$tot.n, tot.incr = tot.incr,
     ivba.n = meas.dist.param$step3$rba.n, ivba.incr = ivba.incr,
     coeV.tot = meas.dist.param$step3$coeV.tot,
@@ -603,7 +489,7 @@ step4 <- function(
     outputLvl = 2,
     ...
   )
-  
+
   return(list(accuracy.sim = accuracy.sim, precision.sim = precision.sim, step3 = meas.dist.param$step3))
 }
 
