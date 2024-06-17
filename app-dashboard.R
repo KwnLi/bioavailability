@@ -5,9 +5,8 @@ ui <- dashboardPage(
     sidebarMenu(
       contaminant_input("contam"),
       hr(),
-      menuItem("Step 1", tabName = "step1", startExpanded = TRUE,
-               menuSubItem("Step 1a", tabName="step1a"),
-               menuSubItem("Step 1b", tabName="step1b")),
+      menuItem("Step 1a", tabName = "step1a"),
+      menuItem("Step 1b", tabName = "step1b"),
       menuItem("Step 2", tabName = "step2"),
       menuItem("Step 3", tabName = "step3"),
       menuItem("Step 4", tabName = "step4")
@@ -17,14 +16,13 @@ ui <- dashboardPage(
     tabItems(
       tabItem(tabName = "step1a",
               fluidRow(
-                box(width=6,
-                    step1a_samplesInput <- samples_input("samples_1a")
-                    ),
-                box(width=6,
-                    step1a_params <- step1_input("step1a_params")
+                box(width=12,
+                    title = "Step 1a Parameters",
+                    step1a_interface("step1a_ui"),
+                    step1a_output("step1a_run")
                     )
-              )
-      ),
+                )
+              ),
       tabItem(tabName = "step1b",
               fluidRow(
                 box(width=6,
@@ -49,11 +47,14 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   contam <- contaminant_server("contam")
-  samples_1a <- samples_server("samples_1a")
+
+  step1a_params <- step1a_interface_server("step1a_ui", contam = contam, info=TRUE)
+  step1a_output <- step1a_output_server("step1a_run", step1a_params = step1a_params)
+
   samples_1b <- samples_server("samples_1b", askComposite = FALSE)
 
-  step1a_params <- step1_server("step1a_params", testIncr = FALSE)
   step1b_params <- step1_server("step1b_params", testIncr = TRUE)
+
 }
 
 shinyApp(ui, server)

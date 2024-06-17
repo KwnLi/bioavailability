@@ -21,8 +21,9 @@ step1_input <- function(id){
   )
 }
 
-step1_server <- function(id, testIncr = FALSE){
+step1_server <- function(id, testIncr = FALSE, info=FALSE){
   moduleServer(id, function(input, output, session){
+    shinyjs::toggleElement("info", condition = info)
 
     out <- reactiveValues()
 
@@ -39,10 +40,10 @@ step1_server <- function(id, testIncr = FALSE){
 
       if(input$abs_frcAct=="Custom"){
         shinyjs::showElement(id="inputCustom")
-        out$abs_frcAct <-input$frcAct_custom/100
+        out$frcAct <-input$frcAct_custom/100
       }else{
         shinyjs::hideElement(id="inputCustom")
-        out$abs_frcAct <- as.numeric(input$abs_frcAct)
+        out$frcAct <- as.numeric(input$abs_frcAct)
       }
     })
 
@@ -50,3 +51,4 @@ step1_server <- function(id, testIncr = FALSE){
     out
   })
 }
+

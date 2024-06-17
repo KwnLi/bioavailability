@@ -53,11 +53,11 @@ samples_input <- function(id){
   )
 }
 
-samples_server <- function(id, inputn=TRUE, askComposite=TRUE, info=TRUE){
+samples_server <- function(id, inputn=TRUE, askComposite=TRUE, info=FALSE){
   moduleServer(id, function(input, output, session){
     shinyjs::toggle("sampleParam", condition=inputn)
     shinyjs::toggle("compositeParam", condition=askComposite)
-    shinyjs::toggle("info", condition=info)
+    shinyjs::toggleElement("info", condition = info)
 
     observe({
       comp.choice <- input$composite
@@ -75,8 +75,8 @@ samples_server <- function(id, inputn=TRUE, askComposite=TRUE, info=TRUE){
     observe({
       out$tot.n <- input$tot.n
       out$ivba.n <- input$ivba.n
-      out$composite <- input$composite
-      out$incr <- input$incr
+      out$tot.incr <- input$incr
+      out$ivba.incr <- input$incr
     })
 
     output$info <- renderPrint(reactiveValuesToList(out))
