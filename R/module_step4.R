@@ -72,6 +72,7 @@ step4_interface_server <- function(id, contam, info=FALSE){
 
 step4_run <- function(id){
   tagList(
+    shinyjs::useShinyjs(),
     shinyWidgets::useSweetAlert(),
     shinyWidgets::actionBttn(
       inputId = NS(id,"runStep4"),
@@ -82,6 +83,12 @@ step4_run <- function(id){
 
 step4_run_server <- function(id, step4_params){
   moduleServer(id, function(input,output,session){
+
+    observe({
+      tot.present <- length(step4_params()$meas.tot)>0
+      ivba.present <- length(step4_params()$meas.ivba)>0
+      shinyjs::toggleState("runStep4", condition = all(tot.present, ivba.present))
+    })
 
     results <- reactiveValues()
 
@@ -130,6 +137,7 @@ step4_results <- function(id){
     htmlOutput(NS(id,"accuracyText")),
     br(),
     htmlOutput(NS(id,"precisionText")),
+    br(),
     tool_notes(),
     br(),
     br(),

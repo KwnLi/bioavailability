@@ -56,6 +56,7 @@ step3_interface_server <- function(id, contam, info=FALSE){
 
 step3_run <- function(id){
   tagList(
+    shinyjs::useShinyjs(),
     shinyWidgets::useSweetAlert(),
     shinyWidgets::actionBttn(
       inputId = NS(id,"runStep3"),
@@ -66,6 +67,12 @@ step3_run <- function(id){
 
 step3_run_server <- function(id, step3_params){
   moduleServer(id, function(input,output,session){
+
+    observe({
+      tot.present <- length(step3_params()$meas.tot)>0
+      ivba.present <- length(step3_params()$meas.ivba)>0
+      shinyjs::toggleState("runStep3", condition = all(tot.present, ivba.present))
+    })
 
     results <- reactiveValues()
 

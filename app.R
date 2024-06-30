@@ -171,7 +171,7 @@ server <- function(input, output, session) {
   }) |> bindEvent(step1a_output(), ignoreInit = TRUE)
 
   # STEP 1B
-  step1b_params <- step1b_interface_server("step1b_ui", contam = contam)
+  step1b_params <- step1b_interface_server("step1b_ui", contam = contam, info = FALSE)
   step1b_output <- step1b_run_server("step1b_run", step1b_params = step1b_params)
   step1b_results_server("step1b_results", step1b_output)
 
@@ -207,7 +207,7 @@ server <- function(input, output, session) {
   }) |> bindEvent(step3_output())
 
   # STEP 4
-  step4_params <- step4_interface_server("step4_ui", contam = contam, info = TRUE)
+  step4_params <- step4_interface_server("step4_ui", contam = contam, info = FALSE)
   step4_output <- step4_run_server("step4_run", step4_params = step4_params)
   step4_results_server("step4_results", step4_output)
 

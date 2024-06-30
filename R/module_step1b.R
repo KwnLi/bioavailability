@@ -78,6 +78,7 @@ step1b_interface_server <- function(id, contam, info=FALSE){
 
 step1b_run <- function(id){
   tagList(
+    shinyjs::useShinyjs(),
     shinyWidgets::useSweetAlert(),
     shinyWidgets::actionBttn(
       inputId = NS(id,"runStep1b"),
@@ -88,6 +89,11 @@ step1b_run <- function(id){
 
 step1b_run_server <- function(id, step1b_params){
   moduleServer(id, function(input,output,session){
+
+    observe({
+      incr.present <- length(step1b_params()$params$incr.vec)>0
+      shinyjs::toggleState("runStep1b", condition = incr.present)
+    })
 
     results <- reactiveValues()
 
