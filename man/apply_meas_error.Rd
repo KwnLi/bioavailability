@@ -13,6 +13,9 @@ apply_meas_error(tru.val = NULL, max.val = Inf, coefVar = 0.05)
 
 \item{coefVar}{coefficient of variation of error spread around mean}
 }
+\value{
+A value drawn from a distribution specified by the parameters
+}
 \description{
 Apply measurement error
 }

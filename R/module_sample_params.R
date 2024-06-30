@@ -1,6 +1,6 @@
 contaminant_input <- function(id){
   tagList(
-    radioGroupButtons(NS(id,"AsPb"),
+    shinyWidgets::radioGroupButtons(NS(id,"AsPb"),
                  "Select contaminant",
                  choices = c(Pb = "Pb", As = "As")),
     numericInput(NS(id,"actLvl"),
@@ -27,27 +27,34 @@ contaminant_server <- function(id){
 }
 
 samples_input <- function(id){
-  tagList(
+  fluidRow(
     shinyjs::useShinyjs(),
 
     # total concentration sample input
     div(
       id = NS(id, "sampleParam"),
-      numericInput(NS(id,"tot.n"), "# of samples to be analyzed for total metal concentration", 1, min = 1),
-      numericInput(NS(id,"ivba.n"), "# of samples to be analyzed for IVBA", 1, min = 1)
+      column(
+        width = 4,
+        numericInput(NS(id,"tot.n"), "# of samples to be analyzed for total metal concentration", 1, min = 1),
+        numericInput(NS(id,"ivba.n"), "# of samples to be analyzed for IVBA", 1, min = 1)
+      )
     ),
 
     # composite
     div(
       id = NS(id, "compositeParam"),
-      radioButtons(NS(id,"composite"), "Sample aggregation", choices = c(Discrete = FALSE, Composite = TRUE), inline=TRUE),
+      column(width = 4,
+        radioButtons(NS(id,"composite"), "Sample aggregation", choices = c(Discrete = FALSE, Composite = TRUE))
+      ),
       div(
         id = NS(id, "incrParam"),
-        numericInput(NS(id,"incr"),
-                     label = div(style = "font-weight: normal; font-style: italic",
-                                 "*Increments per composite sample:"),
-                     value=2, min = 2)
-        ),
+        column(width = 4,
+          numericInput(NS(id,"incr"),
+                       label = div(style = "font-weight: normal; font-style: italic",
+                                   "*Increments per composite sample:"),
+                       value=2, min = 2)
+        )
+      )
     ),
     div(id="info", verbatimTextOutput(NS(id,"info")))
   )
@@ -73,10 +80,15 @@ samples_server <- function(id, inputn=TRUE, askComposite=TRUE, info=FALSE){
     out <- reactiveValues()
 
     observe({
-      out$tot.n <- input$tot.n
-      out$ivba.n <- input$ivba.n
-      out$tot.incr <- input$incr
-      out$ivba.incr <- input$incr
+      if(inputn){
+        out$tot.n <- input$tot.n
+        out$ivba.n <- input$ivba.n
+      }
+
+      if(askComposite){
+        out$tot.incr <- input$incr
+        out$ivba.incr <- input$incr
+      }
     })
 
     output$info <- renderPrint(reactiveValuesToList(out))

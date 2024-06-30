@@ -22,6 +22,7 @@ simDU(
   dist_rba = "normal",
   custom_sepred = NULL,
   error_tot = FALSE,
+  error_tot_cv = NULL,
   error_ivb = FALSE,
   error_ivb_cv = NULL,
   ivba_model = FALSE,
@@ -76,6 +77,9 @@ defaults}
 
 \item{error_tot}{simulation parameter: (T/F) include total conc. measurement
 error}
+
+\item{error_tot_cv}{simulation parameter: (T/F) total conc. measurement error
+coefficient of variation}
 
 \item{error_ivb}{simulation parameter: (T/F) include IVBA measurement error}
 

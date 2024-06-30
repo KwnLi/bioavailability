@@ -4,21 +4,33 @@ step1a_interface <- function(id){
   tagList(
     shinyjs::useShinyjs(),
     fluidRow(
-      column(width=6,
-             h3("Sampling protocol"),
-             samples_input(NS(id,"sample_params"))),
-      column(width=6,
-             h3("Step 1a input"),
-             step1_input(NS(id,"step1a_params")))
+      column(width = 12,
+        h3("Sampling Protocol"),
+        samples_input(NS(id,"sample_params"))
+      )
     ),
+    hr(),
     fluidRow(
-      column(width=6,
-             h3("Decision unit assumptions"),
-             du_assum_input(NS(id,"du_params"))),
-      column(width=6,
-             h3("Simulation parameters"),
-             sim_params_input(id=NS(id,"sim_params")))
+      column(width = 12,
+        h3("Step 1A Input"),
+        step1_input(NS(id,"step1a_params"))
+      )
     ),
+    hr(),
+    fluidRow(
+      column(width = 12,
+        h3("Decision Unit Assumptions"),
+        du_assum_input(NS(id,"du_params"))
+      )
+    ),
+    hr(),
+    fluidRow(
+      column(width = 12,
+        h3("Advanced Settings: Simulation Parameters"),
+        sim_params_input(id=NS(id,"sim_params"))
+      )
+    ),
+    hr(),
     fluidRow(
       id=NS(id,"info"),
       verbatimTextOutput(NS(id,"info"))
@@ -56,102 +68,95 @@ step1a_interface_server <- function(id, contam, info=FALSE){
   })
 }
 
-# Step 1a output -------------
+# Step 1a run simulation -------------
 
-step1a_output <- function(id){
+step1a_run <- function(id){
   tagList(
     shinyWidgets::useSweetAlert(),
-    actionButton(
+    shinyWidgets::actionBttn(
       inputId = NS(id,"runStep1a"),
-      label ="Run simulation"
+      label ="Run simulation", style = "pill", color = "success"
     )
   )
 }
 
-step1a_output_server <- function(id, step1a_params){
+step1a_run_server <- function(id, step1a_params){
   moduleServer(id, function(input,output,session){
 
-    out <- reactiveValues()
+    results <- reactiveValues()
 
     observe({
-      progressSweetAlert(
+      shinyWidgets::progressSweetAlert(
         session = session, id = "step1a_progress",
-        title = "Running step 1A simulations", value = 0
+        title = "Running step 1A simulations: False compliance", value = 10
         )
 
       params_above <- c(step1a_params(), useMeanTot = TRUE, useMeanIVBA = TRUE, outputLvl = 2)
 
       step1aresult_above <- do.call(simDU, params_above)
-      #   simDU(
-      #   AsPb = input$AsPb,
-      #   actLvl = input$actLvl,
-      #   actLvlRBA = input$actLvlRBA,
-      #   tot.n = as.numeric(input$tot.n),
-      #   ivba.n = as.numeric(input$ivba.n),
-      #   tot.incr = as.numeric(input$incr),
-      #   ivba.incr = as.numeric(input$incr),
-      #   useMeanTot = TRUE,
-      #   useMeanIVBA = TRUE,
-      #   frcAct = abs_frcAct(),
-      #   coeV.tot = coeV_tot(),
-      #   coeV.rba = coeV_rba(),
-      #   mn.rba = mn_rba(),
-      #   error_tot = as.logical(input$error_tot),
-      #   error_ivb = as.logical(input$error_ivb),
-      #   error_ivb_cv = as.numeric(input$error_ivb_cv),
-      #   ivba_model = as.logical(input$ivba_model),
-      #   post_mean = as.logical(input$post_mean),
-      #   iter = input$iter,
-      #   dist_tot = input$dist_tot,
-      #   dist_rba = input$dist_rba,
-      #   outputLvl = 2
-      # )
 
-      updateProgressBar(session = session, id = "step1a_progress", value = 50)
+      shinyWidgets::updateProgressBar(session = session,
+                                      title = "Running step 1A simulations: False exceedance",
+                                      id = "step1a_progress", value = 50)
 
       params_below <- c(step1a_params(), useMeanTot = TRUE, useMeanIVBA = TRUE, outputLvl = 2)
       params_below$frcAct <- -params_below$frcAct
 
       step1aresult_below <- do.call(simDU, params_below)
-      #   simDU(
-      #   AsPb = input$AsPb,
-      #   actLvl = input$actLvl,
-      #   actLvlRBA = input$actLvlRBA,
-      #   tot.n = as.numeric(input$tot.n),
-      #   ivba.n = as.numeric(input$ivba.n),
-      #   tot.incr = as.numeric(input$incr),
-      #   ivba.incr = as.numeric(input$incr),
-      #   useMeanTot = TRUE,
-      #   useMeanIVBA = TRUE,
-      #   frcAct = -abs_frcAct(),
-      #   coeV.tot = coeV_tot(),
-      #   coeV.rba = coeV_rba(),
-      #   mn.rba = mn_rba(),
-      #   error_tot = as.logical(input$error_tot),
-      #   error_ivb = as.logical(input$error_ivb),
-      #   error_ivb_cv = as.numeric(input$error_ivb_cv),
-      #   ivba_model = as.logical(input$ivba_model),
-      #   post_mean = as.logical(input$post_mean),
-      #   iter = input$iter,
-      #   dist_tot = input$dist_tot,
-      #   dist_rba = input$dist_rba,
-      #   outputLvl = 2
-      # )
 
-      out$above <- step1aresult_above
-      out$below <- step1aresult_below
-      out$viz_above <- step1a_plot(step1aresult_above)
-      out$viz_below <- step1a_plot(step1aresult_below)
+      results$above <- step1aresult_above
+      results$below <- step1aresult_below
 
-      closeSweetAlert(session = session)
-      sendSweetAlert(
+      shinyWidgets::updateProgressBar(session = session,
+                                      title = "Making outputs",
+                                      id = "step1a_progress", value = 90)
+
+      results$viz_above <- step1a_plot(step1aresult_above)
+      results$viz_below <- step1a_plot(step1aresult_below)
+
+      shinyWidgets::closeSweetAlert(session = session)
+      shinyWidgets::sendSweetAlert(
         session = session,
-        title =" Step 1a simulation completed",
+        title =" Step 1A simulation completed",
         type = "success"
       )
 
     }) |> bindEvent(input$runStep1a)
 
+    # flatten into one list
+    out <- reactive({
+      reactiveValuesToList(results)
+    })
+
     out
+  })
+}
+
+# Step 1a results------------
+
+step1a_results <- function(id){
+  tagList(
+    plotOutput(NS(id,"step1aPlot"), width = "860px"),
+    br(),
+    htmlOutput(NS(id,"step1aText")),
+    br(),
+    tool_notes(),
+    br(),
+    br(),
+    tool_disclaimer()
+  )
+}
+
+step1a_results_server <- function(id, step1a_output){
+  moduleServer(id, function(input,output,session){
+    output$step1aPlot <- renderPlot({
+      cowplot::plot_grid(step1a_output()$viz_above[[1]], step1a_output()$viz_below[[1]])
+    })
+
+    output$step1aText <- renderUI({
+      HTML(paste(step1a_output()$viz_above[[2]],
+                 step1a_output()$viz_below[[2]],
+                 sep = "<br/><br/>"))
+    })
   })
 }

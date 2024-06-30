@@ -24,11 +24,11 @@ serv <- function(input, output, session){
 shinyApp(ui, serv)
 
 ui <- fluidPage(
-  step1_input("a")
+  step2_input("a")
 )
 
 serv <- function(input, output, session){
-  a <- step1_server("a")
+  a <- step2_server("a", info=TRUE)
 }
 
 
@@ -51,7 +51,7 @@ ui <- fluidPage(
 )
 
 serv <- function(input, output, session){
-  a <- du_assum_server("a")
+  a <- du_assum_server("a", show.dist.params = FALSE, info = TRUE)
 }
 
 
@@ -69,14 +69,29 @@ serv <- function(input, output, session){
 shinyApp(ui, serv)
 
 ui <- fluidPage(
-  step1a_interface("a"),
-  step1a_output("b")
-)
+  step1a_interface("a")
+  )
 
 serv <- function(input, output, session){
   a <- step1a_interface_server("a", contam= reactiveValues(a=12), info=TRUE)
-  step1a_output_server("b", a)
 }
 
 
 shinyApp(ui, serv)
+
+ui <- fluidPage(load_csv_ui("csv"))
+
+server <- function(input, output, session){
+  load_csv_server("csv",info=TRUE)
+}
+
+shinyApp(ui, server)
+
+ui <- fluidPage(step3_input("csv"))
+
+server <- function(input, output, session){
+  step3_server("csv",info=TRUE)
+}
+
+shinyApp(ui, server)
+

@@ -7,6 +7,10 @@
 interp(x, y, middle.point.y)
 }
 \arguments{
+\item{x}{x}
+
+\item{y}{y}
+
 \item{middle.point.y}{}
 }
 \value{

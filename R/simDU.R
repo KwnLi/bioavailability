@@ -29,6 +29,8 @@
 #'   defaults
 #' @param error_tot simulation parameter: (T/F) include total conc. measurement
 #'   error
+#' @param error_tot_cv simulation parameter: (T/F) total conc. measurement error
+#'   coefficient of variation
 #' @param error_ivb simulation parameter: (T/F) include IVBA measurement error
 #' @param error_ivb_cv simulation parameter: (T/F) IVBA measurement error
 #'   coefficient of variation
@@ -64,6 +66,7 @@ simDU <- function(
     dist_rba = "normal",
     custom_sepred = NULL,
     error_tot = FALSE,
+    error_tot_cv = NULL,
     error_ivb = FALSE,
     error_ivb_cv = NULL,
     ivba_model = FALSE,
@@ -94,7 +97,7 @@ simDU <- function(
 
   tot.sim.meas <- tot.sim.incr |> dplyr::group_by(sim.num, sample.num) |>
     dplyr::summarize(tru.tot = mean(sim.value), .groups = "drop") |> # take composite
-    dplyr::mutate(meas.tot = apply_meas_error(tru.tot)) # apply measurement error
+    dplyr::mutate(meas.tot = apply_meas_error(tru.tot, coefVar=error_tot_cv)) # apply measurement error
 
   rba.sim.meas <- rba.sim.incr |> dplyr::group_by(sim.num, sample.num) |>
     dplyr::summarize(tru.rba = mean(sim.value), .groups = "drop") |> # take composite

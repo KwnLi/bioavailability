@@ -1,0 +1,13 @@
+name: bioavailability_dashboard
+title: bioavailability_dashboard
+username: kwnli
+account: kwnli
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12199323
+bundleId: 8758001
+url: https://kwnli.shinyapps.io/bioavailability_dashboard/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: data-raw/contam_params.R|data-raw/distParam.R|old/app_old.R|test.R|www/readme_draft.docx|www/readme.pdf

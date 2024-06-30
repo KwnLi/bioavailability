@@ -2,8 +2,8 @@
 #'
 #' Function to find interpolated value given two points (err_pb is the y)
 #'
-#' @param x
-#' @param y
+#' @param x x
+#' @param y y
 #' @param middle.point.y
 #'
 #' @returns Interpolated value between the first and second values of `x`
