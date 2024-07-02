@@ -1,0 +1,26 @@
+---
+title: "Step 1A Report"
+output: pdf_document
+date: "`r Sys.Date()`"
+classoption: landscape
+params:
+  viz_above: NA
+  viz_below: NA
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+devtools::load_all()
+```
+
+```{r plots, fig.width = 9}
+
+cowplot::plot_grid(params$viz_above[[1]], params$viz_below[[1]])
+
+```
+
+```{r text}
+
+HTML(paste(params$viz_above[[2]], params$viz_below[[2]], sep = "<br/><br/>"))
+
+```

@@ -41,7 +41,12 @@ ui <- tagList(
                            side="right", selected = "Parameter input",
                            tabPanel(
                              title = "Output",
-                             step1a_results("step1a_results")
+                             step1a_results("step1a_results"),
+                             br(),
+                             div(
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               make_pdf_ui("step1a_pdf")
+                             )
                            ),
                            tabPanel(
                              title = "Parameter input",
@@ -158,10 +163,20 @@ ui <- tagList(
 server <- function(input, output, session) {
   contam <- contaminant_server("contam")
 
+  session.tempdir <- tempfile(pattern = "tmp", tmpdir = "temp")
+  dir.create(session.tempdir)
+  onStop(function() unlink(session.tempdir, recursive = TRUE))
+
   # STEP 1A
   step1a_params <- step1a_interface_server("step1a_ui", contam = contam)
   step1a_output <- step1a_run_server("step1a_run", step1a_params = step1a_params)
   step1a_results_server("step1a_results", step1a_output)
+
+  make_pdf_server("step1a_pdf",
+                  template.path = "templates/report_step1a.Rmd",
+                  temp.dir = session.tempdir,
+                  report.params = list(viz_above = step1a_output()$viz_above,
+                                       viz_below = step1a_output()$viz_below))
 
   observe({
     updateTabsetPanel(session=session,
