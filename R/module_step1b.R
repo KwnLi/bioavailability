@@ -118,6 +118,9 @@ step1b_run_server <- function(id, step1b_params){
 
       step1bresult_type2 <- do.call(step1, params_type2)
 
+      results$t1_error_threshold = step1b_params()$decision_obj$type1error
+      results$t2_error_threshold = step1b_params()$decision_obj$type2error
+
       results$type1 <- step1bresults_type1
       results$type2 <- step1bresult_type2
 
@@ -126,8 +129,8 @@ step1b_run_server <- function(id, step1b_params){
                                       id = "step1b_progress", value = 90)
 
       # plot output
-      s1_t1 <- step1_plot(results$type1, error_threshold = step1b_params()$decision_obj$type1error)
-      s1_t2 <- step1_plot(results$type2, error_threshold = step1b_params()$decision_obj$type2error)
+      s1_t1 <- step1_plot(results$type1, error_threshold = results$t1_error_threshold)
+      s1_t2 <- step1_plot(results$type2, error_threshold = results$t2_error_threshold)
 
       results$step1bPlot <- cowplot::plot_grid(s1_t1, s1_t2)
 

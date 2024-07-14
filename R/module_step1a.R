@@ -149,6 +149,7 @@ step1a_results <- function(id){
 
 step1a_results_server <- function(id, step1a_output){
   moduleServer(id, function(input,output,session){
+
     output$step1aPlot <- renderPlot({
       cowplot::plot_grid(step1a_output()$viz_above[[1]], step1a_output()$viz_below[[1]])
     })
@@ -158,5 +159,6 @@ step1a_results_server <- function(id, step1a_output){
                  step1a_output()$viz_below[[2]],
                  sep = "<br/><br/>"))
     })
+
   })
 }

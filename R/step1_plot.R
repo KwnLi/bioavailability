@@ -8,7 +8,7 @@
 #' @return A `ggplot2` plot object
 #' @export
 #'
-step1_plot <- function(step1.output, error_threshold){
+step1_plot <- function(step1.output, error_threshold, sm.text = 14, lg.text = 16, plot.text = 4, guide.text = 14){
   frcAct <- step1.output$step1$frcAct[1]
   errortype <- ifelse(frcAct > 0, "False compliance", "False exceedance")
 
@@ -26,7 +26,7 @@ step1_plot <- function(step1.output, error_threshold){
     ggplot2::geom_hline(yintercept = error_threshold, color = "black") +
     ggplot2::annotate("text", x=max(step1results$n_tot), y=error_threshold + 2,
              label="Error prob. objective",
-             hjust=1, fontface="italic") +
+             hjust=1, fontface="italic", size = plot.text) +
     ggplot2::ggtitle(paste(errortype, " error with more sampling, \nwhen true EPC ", step1.output$AsPb, " is ",
                   round(abs(frcAct*100),1), "% ",
                   ifelse(frcAct>0, "above", "below"),
@@ -37,9 +37,10 @@ step1_plot <- function(step1.output, error_threshold){
     egg::theme_article() +
     ggplot2::theme(legend.position = c(0.95,0.95),
           legend.justification = c(1,1),
-          axis.text = ggplot2::element_text( size = 14 ),
-          axis.title = ggplot2::element_text( size = 16),
-          legend.text= ggplot2::element_text(size = 14),
-          plot.title = ggplot2::element_text(size = 16, face = "bold" )
+          axis.text = ggplot2::element_text( size = sm.text ),
+          axis.title = ggplot2::element_text( size = lg.text),
+          legend.text = ggplot2::element_text(size = sm.text),
+          legend.title = ggplot2::element_text(size = guide.text),
+          plot.title = ggplot2::element_text(size = lg.text, face = "bold" )
     )
 }

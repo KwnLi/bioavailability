@@ -118,18 +118,21 @@ step2_run_server <- function(id, step2_params){
       results$type1 <- step2result_type1
       results$type2 <- step2result_type2
 
+      results$t1_error_threshold <- step2_params()$decision_obj$type1error
+      results$t2_error_threshold <- step2_params()$decision_obj$type2error
+
       shinyWidgets::updateProgressBar(session = session,
                                       title = "Making outputs",
                                       id = "step2_progress", value = 90)
 
       # Make outputs
-      s2_t1 <- step2_plot(results$type1, error_threshold = step2_params()$decision_obj$type1error)
-      s2_t2 <- step2_plot(results$type2, error_threshold = step2_params()$decision_obj$type2error)
+      s2_t1 <- step2_plot(results$type1, error_threshold = results$t1_error_threshold)
+      s2_t2 <- step2_plot(results$type2, error_threshold = results$t2_error_threshold)
 
       results$step2Plot <- cowplot::plot_grid(s2_t1, s2_t2)
 
-      results$step2TextType1 <- HTML(step2_text_t1(step2result_type1, error_threshold = step2_params()$decision_obj$type1error))
-      results$step2TextType2 <- HTML(step2_text_t2(step2result_type2, error_threshold = step2_params()$decision_obj$type2error))
+      results$step2TextType1 <- HTML(step2_text_t1(step2result_type1, error_threshold = results$t1_error_threshold))
+      results$step2TextType2 <- HTML(step2_text_t2(step2result_type2, error_threshold = results$t2_error_threshold))
 
       shinyWidgets::closeSweetAlert(session = session)
       shinyWidgets::sendSweetAlert(

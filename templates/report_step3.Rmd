@@ -1,0 +1,72 @@
+---
+title: "Step 3 Report"
+output: pdf_document
+date: "`r Sys.Date()`"
+params:
+  step3: NA
+  AsPb: NA
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+devtools::load_all()
+```
+
+## Results
+
+```{r table1}
+
+simTable <- data.frame(`Model input` = c(
+  paste0("Measured EPC (mg bioavailable ", params$AsPb, " per kg)"),
+  "Measured EPC (% above/below the AL)",
+  paste0("CoV in total ", params$AsPb, " across the DU "),
+  "CoV in % RBA across the DU",
+  "Estimated mean % RBA"),
+  `Value inferred post-sampling based on sampling results` =
+    c(params$step3$meas.ba,
+      100*params$step3$meas.frcAct,
+      params$step3$coeV.tot,
+      params$step3$coeV.rba,
+      params$step3$mn.rba),
+  check.names = FALSE
+  )
+
+knitr::kable(simTable, digits = 2)
+
+```
+
+```{r table2}
+
+simIntTable <- data.frame(
+  `Intermediete values used to derive updated model inputs` =
+    c(paste0("S.D. in total ", params$AsPb, " across composites**"),
+      "S.D. in % RBA across composites*"),
+  `Value inferred post-sampling based on sampling results` =
+    c(params$step3$sd.tot,
+      params$step3$sd.rba),
+  check.names = FALSE
+  )
+
+knitr::kable(simIntTable, digits = 2)
+
+```
+
+`**` S.D. observed across X composites converted to CoV in total `r `params$AsPb` or % RBA using the following equation: 
+
+$$S.D. (\text{sample increments}) = S.D. (\text{observed across N composites}) * \sqrt{\text{\# increments}}$$
+
+### Notes:
+
+***EPC*** = Exposure Point Concentration*
+
+***DU*** = Decision Unit
+
+***AL*** = Action Level
+  
+* Here, the EPC is defined as the bioavailability-adjusted soil metal concentration (i.e., the total metal concentration (mg/kg) x % RBA), which is compared to an action level that has not been adjusted for bioavailability. In cases where a % RBA value other than 100% was input in the Assumed RBA of the action level field when defining the action level, the tool converts the RBA-adjusted action level to an action level that has not been adjusted for RBA by multiplying the user input action level by the user input assumed RBA of the action level (%).
+
+### Disclaimers:
+
+* Use of this tool requires assumptions that may not be accurate
+
+* The tool estimates false compliance and false exceedance decision error probability based primarily on uncertainty in a) representativeness of samples collected with respect to average conditions across the geographic scale of the decision unit and b) analytical measurements of total metal concentration and % IVBA. Other factors not considered by the simulation model may impact decision error probability, including but not limited to uncertainty in the EPA validated methods used to convert measurements of soil PB or As IVBA to RBA.

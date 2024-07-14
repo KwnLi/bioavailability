@@ -7,7 +7,7 @@
 #' @return A `ggplot2` plot object
 #' @export
 #'
-step1a_plot <- function(step1a.output){
+step1a_plot <- function(step1a.output, sm.text = 14, lg.text = 16, hatch.spacing = 0.01){
   measured.EPC <- step1a.output$err_pb$tru_ba
   action.level <- step1a.output$err_pb$actLvl.adj
 
@@ -48,7 +48,7 @@ step1a_plot <- function(step1a.output){
                            pattern_fill = "black",
                            pattern_angle = 45,
                            pattern_density = 0.1,
-                           pattern_spacing = 0.01,) +
+                           pattern_spacing = hatch.spacing,) +
     egg::theme_article() +
     ggplot2::geom_vline(data = data.frame(threshold = c("Assumed true EPC", "Action level"),
                                  value = c(measured.EPC, action.level)),
@@ -65,11 +65,11 @@ step1a_plot <- function(step1a.output){
              "False compliance decision error probability"
       )
     ) +
-    ggplot2::theme(axis.text = ggplot2::element_text( size = 14 ),
-          axis.title = ggplot2::element_text( size = 16),
-          strip.text = ggplot2::element_text(size = 16),
-          legend.text= ggplot2::element_text(size = 14),
-          plot.title = ggplot2::element_text(size = 16, face = "bold" ),
+    ggplot2::theme(axis.text = ggplot2::element_text( size = sm.text ),
+          axis.title = ggplot2::element_text( size = lg.text),
+          strip.text = ggplot2::element_text(size = lg.text),
+          legend.text= ggplot2::element_text(size = sm.text),
+          plot.title = ggplot2::element_text(size = lg.text, face = "bold" ),
           legend.position = "top")
 
   outputText <- paste0(

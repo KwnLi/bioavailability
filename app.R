@@ -44,6 +44,7 @@ ui <- tagList(
                              step1a_results("step1a_results"),
                              br(),
                              div(
+                               id = "show_step1a_pdf",
                                style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
                                make_pdf_ui("step1a_pdf")
                              )
@@ -67,7 +68,13 @@ ui <- tagList(
                            side="right", selected = "Parameter input",
                            tabPanel(
                              title = "Output",
-                             step1b_results("step1b_results")
+                             step1b_results("step1b_results"),
+                             br(),
+                             div(
+                               id = "show_step1b_pdf",
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               make_pdf_ui("step1b_pdf")
+                             )
                            ),
                            tabPanel(
                              title = "Parameter input",
@@ -88,7 +95,13 @@ ui <- tagList(
                            side="right", selected = "Parameter input",
                            tabPanel(
                              title = "Output",
-                             step2_results("step2_results")
+                             step2_results("step2_results"),
+                             br(),
+                             div(
+                               id = "show_step2_pdf",
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               make_pdf_ui("step2_pdf")
+                             )
                            ),
                            tabPanel(
                              title = "Parameter input",
@@ -109,7 +122,13 @@ ui <- tagList(
                            side="right", selected = "Parameter input",
                            tabPanel(
                              title = "Output",
-                             step3_results("step3_results")
+                             step3_results("step3_results"),
+                             br(),
+                             div(
+                               id = "show_step3_pdf",
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               make_pdf_ui("step3_pdf")
+                             )
                            ),
                            tabPanel(
                              title = "Parameter input",
@@ -130,7 +149,13 @@ ui <- tagList(
                            side="right", selected = "Parameter input",
                            tabPanel(
                              title = "Output",
-                             step4_results("step4_results")
+                             step4_results("step4_results"),
+                             br(),
+                             div(
+                               id = "show_step4_pdf",
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               make_pdf_ui("step4_pdf")
+                             )
                            ),
                            tabPanel(
                              title = "Parameter input",
@@ -164,7 +189,7 @@ server <- function(input, output, session) {
   contam <- contaminant_server("contam")
 
   session.tempdir <- tempfile(pattern = "tmp", tmpdir = "temp")
-  dir.create(session.tempdir)
+  dir.create(session.tempdir, recursive = TRUE)
   onStop(function() unlink(session.tempdir, recursive = TRUE))
 
   # STEP 1A
@@ -172,11 +197,15 @@ server <- function(input, output, session) {
   step1a_output <- step1a_run_server("step1a_run", step1a_params = step1a_params)
   step1a_results_server("step1a_results", step1a_output)
 
+  observe({
+    shinyjs::toggleElement(id = "show_step1a_pdf", condition = length(step1a_output())>0)
+  })
+
   make_pdf_server("step1a_pdf",
                   template.path = "templates/report_step1a.Rmd",
                   temp.dir = session.tempdir,
-                  report.params = list(viz_above = step1a_output()$viz_above,
-                                       viz_below = step1a_output()$viz_below))
+                  report.params = step1a_output,
+                  outname = "step1a_report")
 
   observe({
     updateTabsetPanel(session=session,
@@ -191,6 +220,16 @@ server <- function(input, output, session) {
   step1b_results_server("step1b_results", step1b_output)
 
   observe({
+    shinyjs::toggleElement(id = "show_step1b_pdf", condition = length(step1b_output())>0)
+  })
+
+  make_pdf_server("step1b_pdf",
+                  template.path = "templates/report_step1b.Rmd",
+                  temp.dir = session.tempdir,
+                  report.params = step1b_output,
+                  outname = "step1b_report")
+
+  observe({
     updateTabsetPanel(session=session,
                       inputId = "step1b_box",
                       selected = "Output"
@@ -201,6 +240,16 @@ server <- function(input, output, session) {
   step2_params <- step2_interface_server("step2_ui", contam = contam, info = FALSE)
   step2_output <- step2_run_server("step2_run", step2_params = step2_params)
   step2_results_server("step2_results", step2_output)
+
+  observe({
+    shinyjs::toggleElement(id = "show_step2_pdf", condition = length(step2_output())>0)
+  })
+
+  make_pdf_server("step2_pdf",
+                  template.path = "templates/report_step2.Rmd",
+                  temp.dir = session.tempdir,
+                  report.params = step2_output,
+                  outname = "step2_report")
 
   observe({
     updateTabsetPanel(session=session,
@@ -215,6 +264,16 @@ server <- function(input, output, session) {
   step3_results_server("step3_results", step3_output)
 
   observe({
+    shinyjs::toggleElement(id = "show_step3_pdf", condition = length(step3_output())>0)
+  })
+
+  make_pdf_server("step3_pdf",
+                  template.path = "templates/report_step3.Rmd",
+                  temp.dir = session.tempdir,
+                  report.params = step3_output,
+                  outname = "step3_report")
+
+  observe({
     updateTabsetPanel(session=session,
                       inputId = "step3_box",
                       selected = "Output"
@@ -225,6 +284,16 @@ server <- function(input, output, session) {
   step4_params <- step4_interface_server("step4_ui", contam = contam, info = FALSE)
   step4_output <- step4_run_server("step4_run", step4_params = step4_params)
   step4_results_server("step4_results", step4_output)
+
+  observe({
+    shinyjs::toggleElement(id = "show_step4_pdf", condition = length(step4_output())>0)
+  })
+
+  make_pdf_server("step4_pdf",
+                  template.path = "templates/report_step4.Rmd",
+                  temp.dir = session.tempdir,
+                  report.params = reactive({list(step4_output = step4_output())}),
+                  outname = "step4_report")
 
   observe({
     updateTabsetPanel(session=session,

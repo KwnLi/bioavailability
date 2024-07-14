@@ -6,7 +6,7 @@
 #'   precision text string
 #' @export
 #'
-step4_plot <- function(step4.output){
+step4_plot <- function(step4.output, sm.text = 14, lg.text = 16, strp.text = 20){
 
   measured.EPC <- step4.output$step3$meas.ba
   action.level <- step4.output$step3$actLvl.adj
@@ -80,10 +80,10 @@ step4_plot <- function(step4.output){
     ggplot2::labs(linetype = "", color = "") +
     ggplot2::xlab(paste0("Model-estimated measured EPC (mg kg-1)\nacross ",
                 sim_ct, " model iterations")) +
-    ggplot2::theme(axis.text = ggplot2::element_text( size = 14 ),
-          axis.title = ggplot2::element_text( size = 16, face = "bold" ),
-          strip.text = ggplot2::element_text(size = 20),
-          legend.text= ggplot2::element_text(size = 14),
+    ggplot2::theme(axis.text = ggplot2::element_text( size = sm.text ),
+          axis.title = ggplot2::element_text( size = lg.text, face = "bold" ),
+          strip.text = ggplot2::element_text(size = strp.text),
+          legend.text= ggplot2::element_text(size = sm.text),
           legend.position = "top")
 
   accuracyText <- paste0(

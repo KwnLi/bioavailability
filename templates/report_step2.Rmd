@@ -1,12 +1,15 @@
 ---
-title: "Step 1A Report"
+title: "Step 2 Report"
 output: pdf_document
 date: "`r Sys.Date()`"
 params:
-  viz_above: NA
-  viz_below: NA
-  above: NA
-  below: NA
+  type1: NA
+  type2: NA
+  t1_error_threshold: NA
+  t2_error_threshold: NA
+  step2Plot: NA
+  step2TextType1: NA
+  step2TextType2: NA
 ---
 
 ```{r setup, include=FALSE}
@@ -18,24 +21,28 @@ devtools::load_all()
 
 ```{r plots, fig.width = 6, fig.height=3}
 
-plot_above <-step1a_plot(params$above, sm.text = 7, lg.text = 8, hatch.spacing = 0.02)
-plot_below <- step1a_plot(params$below, sm.text = 7, lg.text = 8, hatch.spacing = 0.02)
+s2_t1 <- step2_plot(params$type1, error_threshold = params$t1_error_threshold, 
+                    sm.text = 7, lg.text = 8)
+s2_t2 <- step2_plot(params$type2, error_threshold = params$t2_error_threshold, 
+                    sm.text = 7, lg.text = 8)
 
-cowplot::plot_grid(plot_above[[1]], plot_below[[1]])
+cowplot::plot_grid(s2_t1, s2_t2)
 
 ```
 
-```{r text, results='asis'}
+```{r text, results='asis', warning = FALSE}
 
-text1 <- gsub("<b>|</b>","**",params$viz_above[[2]])
+text1 <- step2_text_t1(params$type1, error_threshold = params$t1_error_threshold)
+text1 <- gsub("<b>|</b>","**", text1)
 
 cat(htmltools::HTML(text1))
 
 ```
 
-```{r text2, results='asis'}
+```{r text2, results='asis', warning = FALSE}
 
-text2 <- gsub("<b>|</b>","**",params$viz_below[[2]])
+text2 <- step2_text_t2(params$type2, error_threshold = params$t2_error_threshold)
+text2 <- gsub("<b>|</b>","**", text2)
 
 cat(htmltools::HTML(text2))
 
