@@ -136,7 +136,7 @@ step1b_run_server <- function(id, step1b_params){
 
       # text output
       results$step1bText <- HTML(
-        "**<i>X-axis sample number listed is based on the number of samples
+        "** X-axis sample number listed is based on the number of samples
         analyzed for total metal concentration, adding one additional sample
         incrementally (X+1). If the input number of samples analyzed for IVBA
         was different than that for totals, then the number of samples listed
@@ -145,7 +145,7 @@ step1b_run_server <- function(id, step1b_params){
         and 3 samples analyzed for IVBA, then the left most data point would
         represent 5 samples for totals and 3 samples for IVBA, and each incremental
         data point would represent X+1 samples analyzed for totals and IVBA
-        respectively.</i>"
+        respectively."
       )
 
       shinyWidgets::closeSweetAlert(session = session)
@@ -172,9 +172,9 @@ step1b_results <- function(id){
   tagList(
     plotOutput(NS(id,"step1bPlot"), width = "860px"),
     br(),
-    htmlOutput(NS(id,"step1bText")),
-    br(),
     tool_notes(),
+    br(),
+    htmlOutput(NS(id,"step1bText")),
     br(),
     br(),
     tool_disclaimer()

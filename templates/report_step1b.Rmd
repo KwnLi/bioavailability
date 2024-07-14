@@ -29,8 +29,6 @@ cowplot::plot_grid(s1_t1, s1_t2)
 
 ```
 
-`**` *X-axis sample number listed is based on the number of samples analyzed for total metal concentration, adding one additional sample incrementally (X+1). If the input number of samples analyzed for IVBA was different than that for totals, then the number of samples listed on the x-axis would not represent IVBA sample number. For example, if the sampling protocol originally input was 5 samples analyzed for totals and 3 samples analyzed for IVBA, then the left most data point would represent 5 samples for totals and 3 samples for IVBA, and each incremental data point would represent X+1 samples analyzed for totals and IVBA respectively.*
-
 ### Notes:
 
 ***EPC*** = Exposure Point Concentration*
@@ -40,6 +38,8 @@ cowplot::plot_grid(s1_t1, s1_t2)
 ***AL*** = Action Level
   
 `*` Here, the EPC is defined as the bioavailability-adjusted soil metal concentration (i.e., the total metal concentration (mg/kg) x % RBA), which is compared to an action level that has not been adjusted for bioavailability. In cases where a % RBA value other than 100% was input in the Assumed RBA of the action level field when defining the action level, the tool converts the RBA-adjusted action level to an action level that has not been adjusted for RBA by multiplying the user input action level by the user input assumed RBA of the action level (%).
+
+`**` X-axis sample number listed is based on the number of samples analyzed for total metal concentration, adding one additional sample incrementally (X+1). If the input number of samples analyzed for IVBA was different than that for totals, then the number of samples listed on the x-axis would not represent IVBA sample number. For example, if the sampling protocol originally input was 5 samples analyzed for totals and 3 samples analyzed for IVBA, then the left most data point would represent 5 samples for totals and 3 samples for IVBA, and each incremental data point would represent X+1 samples analyzed for totals and IVBA respectively.
 
 ### Disclaimers:
 

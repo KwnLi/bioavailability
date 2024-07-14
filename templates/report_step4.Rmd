@@ -50,10 +50,6 @@ knitr::kable(simIntTable, digits = 2)
 
 ```
 
-`**` S.D. observed across X composites converted to CoV in total `r `params$step4_output$AsPb` or % RBA using the following equation: 
-
-$$S.D. (\text{sample increments}) = S.D. (\text{observed across N composites}) * \sqrt{\text{\# increments}}$$
-
 ```{r plot, fig.width = 6, fig.height=3.5}
 
 plotData <- step4_plot(params$step4_output, sm.text = 7, lg.text = 8, strp.text = 10)
@@ -86,7 +82,11 @@ cat(text2)
 
 ***AL*** = Action Level
   
-* Here, the EPC is defined as the bioavailability-adjusted soil metal concentration (i.e., the total metal concentration (mg/kg) x % RBA), which is compared to an action level that has not been adjusted for bioavailability. In cases where a % RBA value other than 100% was input in the Assumed RBA of the action level field when defining the action level, the tool converts the RBA-adjusted action level to an action level that has not been adjusted for RBA by multiplying the user input action level by the user input assumed RBA of the action level (%).
+`*` Here, the EPC is defined as the bioavailability-adjusted soil metal concentration (i.e., the total metal concentration (mg/kg) x % RBA), which is compared to an action level that has not been adjusted for bioavailability. In cases where a % RBA value other than 100% was input in the Assumed RBA of the action level field when defining the action level, the tool converts the RBA-adjusted action level to an action level that has not been adjusted for RBA by multiplying the user input action level by the user input assumed RBA of the action level (%).
+
+`**` S.D. observed across X composites converted to CoV in total `r params$step4_output$AsPb` or % RBA using the following equation: 
+
+$$S.D. (\text{sample increments}) = S.D. (\text{observed across N composites}) * \sqrt{\text{\# increments}}$$
 
 ### Disclaimers:
 

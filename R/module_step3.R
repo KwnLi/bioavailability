@@ -114,9 +114,9 @@ step3_results <- function(id){
     br(),
     tableOutput(NS(id,"simIntTable")),
     br(),
-    htmlOutput(NS(id,"simIntTableText")),
-    br(),
     tool_notes(),
+    br(),
+    htmlOutput(NS(id,"simIntTableText")),
     br(),
     br(),
     tool_disclaimer()

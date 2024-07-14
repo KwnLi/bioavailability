@@ -130,8 +130,6 @@ step4_results <- function(id){
     br(),
     tableOutput(NS(id,"simIntTable")),
     br(),
-    htmlOutput(NS(id,"simIntTableText")),
-    br(),
     plotOutput(NS(id,"step4Plot"), width = "860px"),
     br(),
     htmlOutput(NS(id,"accuracyText")),
@@ -139,6 +137,8 @@ step4_results <- function(id){
     htmlOutput(NS(id,"precisionText")),
     br(),
     tool_notes(),
+    br(),
+    htmlOutput(NS(id,"simIntTableText")),
     br(),
     br(),
     tool_disclaimer()
