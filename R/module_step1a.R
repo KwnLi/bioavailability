@@ -1,4 +1,4 @@
-# Step 1a interface ---------------
+# Step 1a input ---------------
 
 step1a_interface <- function(id){
   tagList(
