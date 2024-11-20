@@ -91,7 +91,7 @@ step1a_run_server <- function(id, step1a_params){
         title = "Running step 1A simulations: False compliance", value = 10
         )
 
-      params_above <- c(step1a_params(), useMeanTot = TRUE, useMeanIVBA = TRUE, outputLvl = 2)
+      params_above <- c(step1a_params(), useMeanTot = TRUE, useMeanIVBA = TRUE, outputLvl = 4)
 
       step1aresult_above <- do.call(simDU, params_above)
 
@@ -99,7 +99,7 @@ step1a_run_server <- function(id, step1a_params){
                                       title = "Running step 1A simulations: False exceedance",
                                       id = "step1a_progress", value = 50)
 
-      params_below <- c(step1a_params(), useMeanTot = TRUE, useMeanIVBA = TRUE, outputLvl = 2)
+      params_below <- c(step1a_params(), useMeanTot = TRUE, useMeanIVBA = TRUE, outputLvl = 4)
       params_below$frcAct <- -params_below$frcAct
 
       step1aresult_below <- do.call(simDU, params_below)

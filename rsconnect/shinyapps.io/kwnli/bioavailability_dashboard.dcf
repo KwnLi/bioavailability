@@ -5,7 +5,7 @@ account: kwnli
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 12199323
-bundleId: 8862424
+bundleId: 9390107
 url: https://kwnli.shinyapps.io/bioavailability_dashboard/
 version: 1
 asMultiple: FALSE

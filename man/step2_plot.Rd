@@ -4,7 +4,7 @@
 \alias{step2_plot}
 \title{Step 2 plot}
 \usage{
-step2_plot(step2.output, error_threshold)
+step2_plot(step2.output, error_threshold, sm.text = 14, lg.text = 16)
 }
 \arguments{
 \item{step2.output}{Output of \code{step2} function}

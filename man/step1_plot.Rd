@@ -4,7 +4,14 @@
 \alias{step1_plot}
 \title{Step 1 plot}
 \usage{
-step1_plot(step1.output, error_threshold)
+step1_plot(
+  step1.output,
+  error_threshold,
+  sm.text = 14,
+  lg.text = 16,
+  plot.text = 4,
+  guide.text = 14
+)
 }
 \arguments{
 \item{step1.output}{Output of \code{step1} function}

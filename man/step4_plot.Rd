@@ -4,7 +4,7 @@
 \alias{step4_plot}
 \title{Step 4 plot}
 \usage{
-step4_plot(step4.output)
+step4_plot(step4.output, sm.text = 14, lg.text = 16, strp.text = 20)
 }
 \arguments{
 \item{step4.output}{output of \code{step4} function}

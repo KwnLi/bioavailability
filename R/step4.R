@@ -42,7 +42,7 @@ step4 <- function(meas.tot = NULL, meas.ivba = NULL, AsPb = NULL,
     coeV.rba = meas.dist.param$step3$coeV.rba,
     mn.rba = meas.dist.param$step3$mn.rba,
     useMeanTot = useMeanTot,
-    outputLvl = 2,
+    outputLvl = 4,
     ...
   )
 
@@ -55,7 +55,7 @@ step4 <- function(meas.tot = NULL, meas.ivba = NULL, AsPb = NULL,
     coeV.rba = meas.dist.param$step3$coeV.rba,
     mn.rba = meas.dist.param$step3$mn.rba,
     useMeanTot = useMeanTot,
-    outputLvl = 2,
+    outputLvl = 4,
     ...
   )
 

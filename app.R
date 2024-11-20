@@ -47,6 +47,10 @@ ui <- tagList(
                                id = "show_step1a_pdf",
                                style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
                                make_pdf_ui("step1a_pdf")
+                             ),
+                             div(
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               download_interface("step1a_download")
                              )
                            ),
                            tabPanel(
@@ -74,6 +78,10 @@ ui <- tagList(
                                id = "show_step1b_pdf",
                                style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
                                make_pdf_ui("step1b_pdf")
+                             ),
+                             div(
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               download_interface("step1b_download")
                              )
                            ),
                            tabPanel(
@@ -101,6 +109,10 @@ ui <- tagList(
                                id = "show_step2_pdf",
                                style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
                                make_pdf_ui("step2_pdf")
+                             ),
+                             div(
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               download_interface("step2_download")
                              )
                            ),
                            tabPanel(
@@ -128,6 +140,10 @@ ui <- tagList(
                                id = "show_step3_pdf",
                                style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
                                make_pdf_ui("step3_pdf")
+                             ),
+                             div(
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               download_interface("step3_download")
                              )
                            ),
                            tabPanel(
@@ -155,6 +171,10 @@ ui <- tagList(
                                id = "show_step4_pdf",
                                style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
                                make_pdf_ui("step4_pdf")
+                             ),
+                             div(
+                               style="display:inline-block;margin-left: 40%;padding-bottom: 10px;",
+                               download_interface("step4_download")
                              )
                            ),
                            tabPanel(
@@ -207,6 +227,10 @@ server <- function(input, output, session) {
                   report.params = step1a_output,
                   outname = "step1a_report")
 
+  download_server("step1a_download", step_output = step1a_output,
+                  tmpdir = session.tempdir, stepdirname = "step1a",
+                  default.downloadname = "step1a_simdata")
+
   observe({
     updateTabsetPanel(session=session,
                       inputId = "step1a_box",
@@ -228,6 +252,10 @@ server <- function(input, output, session) {
                   temp.dir = session.tempdir,
                   report.params = step1b_output,
                   outname = "step1b_report")
+
+  download_server("step1b_download", step_output = step1b_output,
+                  tmpdir = session.tempdir, stepdirname = "step1b",
+                  default.downloadname = "step1b_simdata")
 
   observe({
     updateTabsetPanel(session=session,
@@ -251,6 +279,10 @@ server <- function(input, output, session) {
                   report.params = step2_output,
                   outname = "step2_report")
 
+  download_server("step2_download", step_output = step2_output,
+                  tmpdir = session.tempdir, stepdirname = "step2",
+                  default.downloadname = "step2_simdata")
+
   observe({
     updateTabsetPanel(session=session,
                       inputId = "step2_box",
@@ -273,6 +305,10 @@ server <- function(input, output, session) {
                   report.params = step3_output,
                   outname = "step3_report")
 
+  download_server("step3_download", step_output = step3_output,
+                  tmpdir = session.tempdir, stepdirname = "step3",
+                  default.downloadname = "step3_simdata")
+
   observe({
     updateTabsetPanel(session=session,
                       inputId = "step3_box",
@@ -294,6 +330,10 @@ server <- function(input, output, session) {
                   temp.dir = session.tempdir,
                   report.params = reactive({list(step4_output = step4_output())}),
                   outname = "step4_report")
+
+  download_server("step4_download", step_output = step4_output,
+                  tmpdir = session.tempdir, stepdirname = "step4",
+                  default.downloadname = "step4_simdata")
 
   observe({
     updateTabsetPanel(session=session,

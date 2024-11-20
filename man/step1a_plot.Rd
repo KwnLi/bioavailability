@@ -4,7 +4,7 @@
 \alias{step1a_plot}
 \title{Step1a plot}
 \usage{
-step1a_plot(step1a.output)
+step1a_plot(step1a.output, sm.text = 14, lg.text = 16, hatch.spacing = 0.01)
 }
 \arguments{
 \item{step1a.output}{Output of step1a.}
