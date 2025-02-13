@@ -14,7 +14,9 @@ step1a_plot <- function(step1a.output, sm.text = 14, lg.text = 16, hatch.spacing
   total.range <- range(step1a.output$DU_sim$ba_DU)
 
   EPC.AL.bin.separation <- round(30*abs(measured.EPC-action.level)/diff(total.range),0) # number of histogram bins separating EPC and AL
-  bin.size <- abs(measured.EPC-action.level)/EPC.AL.bin.separation
+  bin.size <- ifelse(EPC.AL.bin.separation==0,
+                     diff(total.range)/30,
+                     abs(measured.EPC-action.level)/EPC.AL.bin.separation)
 
   # create custom bins
   custombreaks <- action.level
