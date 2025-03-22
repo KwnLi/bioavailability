@@ -92,7 +92,7 @@ step1a_run_server <- function(id, step1a_params){
         )
 
       params_above <- c(step1a_params(), useMeanTot = TRUE, useMeanIVBA = TRUE, outputLvl = 4)
-      browser()
+
       step1aresult_above <- do.call(simDU, params_above)
 
       shinyWidgets::updateProgressBar(session = session,
