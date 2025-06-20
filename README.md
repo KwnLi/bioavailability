@@ -2,6 +2,8 @@
 
 ### Sitewide RBA error estimation of As
 
+App is hosted at: https://kwnli.shinyapps.io/bioavailability_sitewide/
+
 This app creates three csv outputs to download:
 
 **'DU_error.csv'** contains the mean sample results for every DU across every site, over all simulation iterations. If the sampling plan included increments, these have already been averaged for each sample in this table. These are the column meanings:
@@ -10,8 +12,8 @@ This app creates three csv outputs to download:
 - `DU` - DU number
 - `DU_mn` - the "true" DU-specific RBA mean, drawn from the sitewide distribution
 - `n_rba` - the number of samples measured for RBA
-- `est_ivb_DU` - the measured IVBA value for the DU, taken from the mean of the sample estiamtes
-- `est_rba_DU` - the estimated RBA value for the DU, based on the IVBA
+- `est_ivb_DU` - the measured IVBA value for the DU, taken from the mean of the sample estimates
+- `est_rba_DU` - the estimated RBA value for the DU, based on the IVBA. These values have averaged individual sample increments already, if there were any specified
 - `est_rba_site` - the estimated sitewide RBA, based on averaging the DU RBA estimates (`est_rba_site`)
 - `DU_error` - the % relative error for each DU, comparing the sitewide RBA estimate (`est_rba_site`) to the true RBA of the DU (`DU_mn`) 
 - `DU_abserror` - the absolute value of the % relative error for each DU
