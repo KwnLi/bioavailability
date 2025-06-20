@@ -9,11 +9,11 @@
 Estimates error guideline exceedance and compliance, based on user inputs, accounting for bioavailability
 }
 \author{
-\strong{Maintainer}: Clay Nelson \email{claymnelson@gmail.com@gmail.com}
+\strong{Maintainer}: Kevin Li \email{kli.kevin@gmail.com}
 
 Authors:
 \itemize{
-  \item Kevin Li \email{kli.kevin@gmail.com}
+  \item Clay Nelson \email{claymnelson@gmail.com@gmail.com}
 }
 
 }

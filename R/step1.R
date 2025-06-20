@@ -9,7 +9,7 @@
 #' @param incr.vec vector of increments to test
 #' @param ... simDU parameters
 #'
-#' @return
+#' @return simulation results
 #' @export
 #'
 #' @examples

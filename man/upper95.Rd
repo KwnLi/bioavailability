@@ -11,6 +11,9 @@ upper95(x, lvl)
 
 \item{lvl}{desired quantile of \code{x} to calculate}
 }
+\value{
+Upper 95\% quantile of x
+}
 \description{
 This is a convenience function for calculating the 95\% quantile of a vector
 of observations \code{x}, intended for calculating the upper 95\% confidence value

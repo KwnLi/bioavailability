@@ -13,7 +13,7 @@
 #'   (action level: limit of biovalability above which site has to be remedied)
 #' @param actLvlRBA % RBA assumed in the action level
 #'
-#' @returns
+#' @returns simulation results
 #' @export
 #'
 #' @examples

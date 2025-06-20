@@ -5,7 +5,7 @@ download_interface <- function(id){
   )
 }
 
-download_server <- function(id, step_output, tmpdir, stepdirname, default.downloadname="simData"){
+download_server <- function(id, step_output, tmpdir, stepdirname, default.downloadname="simData", unlist_step_output = TRUE){
   moduleServer(id, function(input, output, session){
 
     shinyjs::hide("downloadTables")  # initially disable download button
@@ -47,12 +47,16 @@ download_server <- function(id, step_output, tmpdir, stepdirname, default.downlo
         unlink(stepdir, recursive = FALSE)   # delete contents of stepdir
       }
 
-      step_unlist <- unlist(step_output(), recursive = FALSE)
+      step_unlist <- if(unlist_step_output){
+        unlist(step_output(), recursive = FALSE)
+      }else{
+        step_output()
+      }
 
       for(i in seq_along(step_unlist)){
         print(names(step_unlist)[i])
         if(is.data.frame(step_unlist[[i]])){
-          write.csv(step_unlist[[i]], file = paste0(stepdir,"/",names(step_unlist)[i],".csv"))
+          write.csv(step_unlist[[i]], file = paste0(stepdir,"/",names(step_unlist)[i],".csv"), row.names = FALSE)
         }else if(is.list(step_unlist[[i]])){
           lvl1_name <- names(step_unlist)[i]
 
@@ -60,7 +64,7 @@ download_server <- function(id, step_output, tmpdir, stepdirname, default.downlo
             if(is.data.frame(step_unlist[[i]][[j]])){
               print(names(step_unlist[[i]])[j])
               write.csv(step_unlist[[i]][[j]],
-                        file = paste0(stepdir,"/",lvl1_name,".",names(step_unlist[[i]])[j],".csv"))
+                        file = paste0(stepdir,"/",lvl1_name,".",names(step_unlist[[i]])[j],".csv"), row.names = FALSE)
             }
           }
         }

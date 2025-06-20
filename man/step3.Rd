@@ -34,6 +34,9 @@ contaminant? T = use the mean; F = use 95\% interval}
 
 \item{actLvlRBA}{\% RBA assumed in the action level}
 }
+\value{
+simulation results
+}
 \description{
 Calculate actual DU statistics
 }

@@ -12,13 +12,11 @@
 #' @param actLvlRBA % RBA assumed in the action level
 #' @param ... `simDU` inputs
 #'
-#' @return
+#' @return simulation results
 #' @export
 #'
 #' @examples
-#' # teststep4 <- step4(testcv(rnorm(n = 100, mean = 400, sd = 39),10),
-#'       meas.ivba = testcv(rnorm(n = 100, mean = 78, sd = 15),10),
-#'       tot.incr = 10, ivba.incr = 10, "Pb")
+#' # teststep4 <- step4(testcv(rnorm(n = 100, mean = 400, sd = 39),10), meas.ivba = testcv(rnorm(n = 100, mean = 78, sd = 15),10), tot.incr = 10, ivba.incr = 10, "Pb")
 step4 <- function(meas.tot = NULL, meas.ivba = NULL, AsPb = NULL,
                   tot.incr = NULL, ivba.incr = NULL, useMeanTot = T,
                   actLvl = 400, actLvlRBA = 60, ...

@@ -2,9 +2,9 @@ Package: bioavailability
 Title: Estimating error guideline exceedance and compliance with bioavailabilty
 Version: 0.0.0.9000
 Authors@R: 
-    c(person("Kevin", "Li", , "kli.kevin@gmail.com", role = c("aut"),
+    c(person("Kevin", "Li", , "kli.kevin@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "")),
-    person("Clay", "Nelson", , "claymnelson@gmail.com@gmail.com", role = c("aut", "cre"),
+    person("Clay", "Nelson", , "claymnelson@gmail.com@gmail.com", role = c("aut"),
            comment = c(ORCID = "")))
 Description: Estimates error guideline exceedance and compliance, based on user inputs, accounting for bioavailability
 License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
@@ -13,12 +13,14 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1
 Imports: 
+    bslib,
     cowplot,
     dplyr,
     egg,
     ggpattern,
     ggplot2,
     shiny,
+    shinyalert,
     shinydashboard,
     shinyjs,
     shinyWidgets,

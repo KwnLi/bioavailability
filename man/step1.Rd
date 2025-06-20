@@ -26,6 +26,9 @@ step1(
 
 \item{...}{simDU parameters}
 }
+\value{
+simulation results
+}
 \description{
 Determine sequence of sample sizes to simulate
 }

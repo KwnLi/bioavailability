@@ -6,7 +6,7 @@
 #' @param x observation values
 #' @param lvl desired quantile of `x` to calculate
 #'
-#' @return
+#' @return Upper 95% quantile of x
 #' @export
 #'
 #' @examples

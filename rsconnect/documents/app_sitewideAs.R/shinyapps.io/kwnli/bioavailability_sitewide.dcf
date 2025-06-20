@@ -1,0 +1,13 @@
+name: bioavailability_sitewide
+title: bioavailability_sitewide
+username: kwnli
+account: kwnli
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14964189
+bundleId: 10487336
+url: https://kwnli.shinyapps.io/bioavailability_sitewide/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: app_full.R|data-raw/contam_params.R|data-raw/distParam.R|old/app_old.R|README.md|templates/report_step1a.Rmd|templates/report_step1b.Rmd|templates/report_step2.Rmd|templates/report_step3.Rmd|templates/report_step4.Rmd|test.R|testcsv.csv|www/readme_draft.docx|www/readme.pdf|man

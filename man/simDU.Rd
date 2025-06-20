@@ -97,12 +97,13 @@ summarizing across samples}
 \code{2}=level1 + summary of each simulation; \code{3}=level2 + total and ivb samples
 for each iteration; \code{4}=level3 + uncomposited increments for each iteration}
 }
+\value{
+simulation results
+}
 \description{
 Simulate DU function
 }
 \examples{
-test <- simDU(AsPb = "As", frcAct = 0.15, tot.n = 5, ivba.n = 3,
-coeV.tot = 0.5, coeV.rba = 0.05, error_tot = TRUE, error_ivb = TRUE,
-error_ivb_cv = 0.05, ivba_model = TRUE, outputLvl = 2)
+test <- simDU(AsPb = "As", frcAct = 0.15, tot.n = 5, ivba.n = 3, coeV.tot = 0.5, coeV.rba = 0.05, error_tot = TRUE, error_ivb = TRUE, error_ivb_cv = 0.05, ivba_model = TRUE, outputLvl = 2)
 
 }

@@ -35,11 +35,12 @@ step4(
 
 \item{...}{\code{simDU} inputs}
 }
+\value{
+simulation results
+}
 \description{
 Calculate precision and accuracy
 }
 \examples{
-# teststep4 <- step4(testcv(rnorm(n = 100, mean = 400, sd = 39),10),
-      meas.ivba = testcv(rnorm(n = 100, mean = 78, sd = 15),10),
-      tot.incr = 10, ivba.incr = 10, "Pb")
+# teststep4 <- step4(testcv(rnorm(n = 100, mean = 400, sd = 39),10), meas.ivba = testcv(rnorm(n = 100, mean = 78, sd = 15),10), tot.incr = 10, ivba.incr = 10, "Pb")
 }

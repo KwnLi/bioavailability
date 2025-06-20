@@ -13,6 +13,6 @@ apply_meas_error <- function(tru.val = NULL, max.val = Inf, coefVar = 0.05
 ){
   meas.tot <- truncnorm::rtruncnorm(n=length(tru.val), a=0, b=max.val,
                          mean = tru.val,
-                         sd = mean(tru.val)*coefVar)
+                         sd = mean(tru.val,na.rm=TRUE)*coefVar)
   return(meas.tot)
 }
