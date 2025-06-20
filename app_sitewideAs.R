@@ -20,7 +20,7 @@ ui <- bslib::page_sidebar(
       bslib::accordion_panel(
         "Site parameters",
         shiny::selectInput("simDist_rba_site", "Site RBA distribution:",
-                           choices = c(normal = "normal", `log-normal` = "lognorm")),
+                           choices = c(normal = "normal", `log-normal` = "lognorm"), selected = "lognorm"),
         shiny::numericInput("mn_rba_site", "True RBAsite mean", value = 60),
         shiny::radioButtons("coeV_rba_site", "Sitewide RBA coefficient of variance (CoV):",
                             choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
@@ -34,7 +34,7 @@ ui <- bslib::page_sidebar(
       bslib::accordion_panel(
         "DU parameters",
         shiny::selectInput("simDist_rba_DU", "DU RBA distribution:",
-                           choices = c(normal = "normal", `log-normal` = "lognorm")),
+                           choices = c(normal = "normal", `log-normal` = "lognorm"), selected = "lognorm"),
         shiny::radioButtons("coeV_rba_DU", "DU RBA coefficient of variance (CoV):",
                             choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
         shiny::div(

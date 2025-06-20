@@ -135,7 +135,7 @@ simSite <- function(
     ) |>
     as.data.frame()
 
-  return(list(DU.error = DU.error, site.error = site.error, sim.error = sim.error))
+  return(list(DU_error = DU.error, site_error = site.error, sim_error = sim.error))
 }
 
 
