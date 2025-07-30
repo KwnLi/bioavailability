@@ -19,6 +19,10 @@ simDist_rba <- function(
     rnorm(n=n.rbameas, mean=tru_mu_rba, sd=tru_mu_rba*coeV_rba)
   } else if(dist_rba == "lognorm"){
     custom_rlnorm(n=n.rbameas, m=tru_mu_rba, s=tru_mu_rba*coeV_rba)
+  } else if(dist_rba == "truncnorm"){
+    truncnorm::rtruncnorm(n=n.rbameas, a=0, b=1, mean=tru_mu_rba, sd=tru_mu_rba*coeV_rba)
+  } else if(dist_rba == "trunclognorm"){
+    custom_rlnorm(n=n.rbameas, m=tru_mu_rba, s=tru_mu_rba*coeV_rba)
   } else if(dist_rba == "uniform"){
     runif(n=n.rbameas, min = 0, max = 1)
   } else{

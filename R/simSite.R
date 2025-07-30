@@ -69,7 +69,7 @@ simSite <- function(
     dplyr::group_by(iter) |>
     dplyr::mutate(est_rba_site = mean(est_rba_DU)) |>
     dplyr::ungroup() |>
-    dplyr::mutate(DU_error = est_rba_site - mn_rba_site,
+    dplyr::mutate(DU_error = est_rba_DU - mn_rba_site,
                   DU_abserror = abs(DU_error)) |>
     dplyr::mutate(iter = as.numeric(iter), DU = as.numeric(DU)) |>
     dplyr::arrange(iter, DU) |>

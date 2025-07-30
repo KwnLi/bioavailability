@@ -11,7 +11,6 @@ ui <- bslib::page_sidebar(
         "Sampling plan",
         shinyjs::useShinyjs(),
         shiny::numericInput("DU.n", "Number of decision units in the site", min = 1, value = 15),
-        shiny::numericInput("ivba.n", "# of samples to be analyzed for IVBA", 5, min = 1),
         shiny::numericInput("ivba.incr",
                             label = div(style = "font-weight: normal; font-style: italic",
                                         "*Increments per IVBA composite sample:"),
@@ -20,7 +19,11 @@ ui <- bslib::page_sidebar(
       bslib::accordion_panel(
         "Site parameters",
         shiny::selectInput("simDist_rba_site", "Site RBA distribution:",
-                           choices = c(normal = "normal", `log-normal` = "lognorm"), selected = "lognorm"),
+                           choices = c(`truncated normal` = "truncnorm",
+                                       `truncated log-normal` = "trunclognorm",
+                                       normal = "normal",
+                                       `log-normal` = "lognorm"),
+                           selected = "truncnorm"),
         shiny::numericInput("mn_rba_site", "True RBAsite mean", value = 60),
         shiny::radioButtons("coeV_rba_site", "Sitewide RBA coefficient of variance (CoV):",
                             choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
@@ -28,19 +31,6 @@ ui <- bslib::page_sidebar(
           id = "input_coeV_rba_site_custom",
           shiny::numericInput("coeV_rba_site_custom",
                               label = div(style = "font-weight: normal; font-style: italic", "[Custom site RBA CoV value]"),
-                              0.75, step = 0.05, min = 0)
-        )
-      ),
-      bslib::accordion_panel(
-        "DU parameters",
-        shiny::selectInput("simDist_rba_DU", "DU RBA distribution:",
-                           choices = c(normal = "normal", `log-normal` = "lognorm"), selected = "lognorm"),
-        shiny::radioButtons("coeV_rba_DU", "DU RBA coefficient of variance (CoV):",
-                            choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
-        shiny::div(
-          id = "input_coeV_rba_DU_custom",
-          shiny::numericInput("coeV_rba_DU_custom",
-                              label = div(style = "font-weight: normal; font-style: italic", "[Custom DU RBA CoV value]"),
                               0.75, step = 0.05, min = 0)
         )
       ),
@@ -69,8 +59,6 @@ server <- function(input, output, session) {
     params$DU.n <- input$DU.n
     params$mn_rba_site <- input$mn_rba_site
     params$simDist_rba_site <- input$simDist_rba_site
-    params$simDist_rba_DU <- input$simDist_rba_DU
-    params$ivba.n <- input$ivba.n
     params$ivba.incr <- input$ivba.incr
     params$error_ivb_cv <- input$error_ivb_cv
     params$iter <- input$iter
@@ -81,14 +69,6 @@ server <- function(input, output, session) {
     }else{
       shinyjs::hideElement("input_coeV_rba_site_custom")
       params$coeV_rba_site <- as.numeric(input$coeV_rba_site)
-    }
-
-    if(input$coeV_rba_DU=="Custom"){
-      shinyjs::showElement("input_coeV_rba_DU_custom")
-      params$coeV_rba_DU <- input$coeV_rba_DU_custom
-    }else{
-      shinyjs::hideElement("input_coeV_rba_DU_custom")
-      params$coeV_rba_DU <- as.numeric(input$coeV_rba_DU)
     }
   })
 
