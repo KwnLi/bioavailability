@@ -1,7 +1,7 @@
 #' Function to generate "true" rba
 #'
 #' @param n.rbameas Number of RBA measurements
-#' @param tru_mu_rba Mean "true" RBA value (value must be 0-1)
+#' @param tru_mu_rba Mean "true" RBA value (% value, must be 0-100)
 #' @param coeV_rba Coefficient of variation of RBA distribution
 #' @param dist_rba Distribution of RBA measurements; can be "normal", "lognorm",
 #'   or "uniform"
@@ -20,7 +20,7 @@ simDist_rba <- function(
   } else if(dist_rba == "lognorm"){
     custom_rlnorm(n=n.rbameas, m=tru_mu_rba, s=tru_mu_rba*coeV_rba)
   } else if(dist_rba == "uniform"){
-    runif(n=n.rbameas, min = 0, max = 1)
+    runif(n=n.rbameas, min = 0, max = 100)
   } else{
     stop(paste("Unrecognized distribution for rba: ",
                dist_rba, sep = ""))
