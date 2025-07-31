@@ -100,9 +100,11 @@ simSite <- function(
       site_abserror_mean = mean(site_abserror),
       site_abserror_lowerci = quantile(site_abserror,.025, na.rm = TRUE),
       site_abserror_upperci = quantile(site_abserror,.975, na.rm = TRUE),
+      site_abserror_max = max(site_abserror, na.rm = TRUE),
       site_error_mean = mean(site_error),
-      site_error_lowerci = quantile(site_error_mean,.025, na.rm = TRUE),
-      site_error_upperci = quantile(site_error_mean,.975, na.rm = TRUE),
+      site_error_lowerci = quantile(site_error,.025, na.rm = TRUE),
+      site_error_upperci = quantile(site_error,.975, na.rm = TRUE),
+      site_error_max = max(site_error, na.rm = TRUE)
     ) |>
     as.data.frame()
 

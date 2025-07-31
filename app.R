@@ -1,7 +1,7 @@
 devtools::load_all()
 
 ui <- bslib::page_sidebar(
-  title = "Sitewide RBA",
+  title = "Sitewide RBA 7.30.2025",
   sidebar =   bslib::sidebar(
     width = 300, open = NA,
     shinyjs::useShinyjs(),
@@ -22,7 +22,8 @@ ui <- bslib::page_sidebar(
                            choices = c(`truncated normal` = "truncnorm",
                                        `truncated log-normal` = "trunclognorm",
                                        normal = "normal",
-                                       `log-normal` = "lognorm"),
+                                       `log-normal` = "lognorm",
+                                       uniform = "uniform"),
                            selected = "truncnorm"),
         shiny::numericInput("mn_rba_site", "True RBAsite mean", value = 60),
         shiny::radioButtons("coeV_rba_site", "Sitewide RBA coefficient of variance (CoV):",

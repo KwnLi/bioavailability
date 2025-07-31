@@ -15,22 +15,22 @@ This app creates three csv outputs to download:
 - `est_ivb_DU` - the measured IVBA value for the DU, taken from the mean of the sample estimates
 - `est_rba_DU` - the estimated RBA value for the DU, based on the IVBA. These values have averaged individual sample increments already, if there were any specified
 - `est_rba_site` - the estimated sitewide RBA, based on averaging the DU RBA estimates (`est_rba_site`)
-- `DU_error` - the % relative error for each DU, comparing the sitewide RBA estimate (`est_rba_site`) to the true RBA of the DU (`DU_mn`) 
-- `DU_abserror` - the absolute value of the % relative error for each DU
+- `DU_error` - the error for each DU, comparing the DU RBA estimate (`est_rba_DU`) to the true RBA of the **site** (input by the user in the GUI) 
+- `DU_abserror` - the absolute value of the error for each DU
 
 **'site_error.csv'** contains the summarized results for each site (i.e., simulation iteration), averaging across DUs for each site and iteration. Column meanings:
 
 - `iter` - iteration number
-- `site_error` - % relative error between estimated sitewide RBA (`est_rba_site` from 'DU_error.csv') and the "true" sitewide RBA, i.e., the mean RBA parameter used to define the site RBA distribution
+- `site_error` - error (difference) between estimated sitewide RBA (`est_rba_site` from 'DU_error.csv') and the "true" sitewide RBA, i.e., the mean RBA parameter used to define the site RBA distribution
 - `site_abserror` - absolute value of `site_error`
-- `DU_error_mean` - mean of the `DU_error`(error comparing the sitewide RBA estimate to the true RBA value of each DU) across each site
+- `DU_error_mean` - mean of the `DU_error`(error comparing the DU RBA estimate to the true site RBA, i.e., the input parameter) across each site
 - `DU_error_lowerci` and `DU_error_upperci` - lower 2.5% and upper 97.5 intervals of `DU_error` in each site
 - `DU_error_max` - maximum `DU_error` value of all the DUs in a site/iteration
 - `DU_abserror_mean`, `DU_abserror_lowerci`, `DU_abserror_upperci`, `DU_abserror_max` - corresponding absolute values of the above statistics
   
 **'sim_error.csv'** contains the summarized results of 'site_error.csv' across all iterations. Column meanings:
 
-- `site_abserror_mean` - average sitewide RBA error across all iterations (`site_abserror` in 'site_error.csv')
-- `DU_abserror_mean` - average of `DU_abserror_mean` values across all iterations
-- `DU_abserror_lowerci` and `DU_abserror_upperci` - averages of lower and upper intervals, respectively, across all iterations
-- `DU_abserror_max` - average of `DU_abserror_max` values across all iterations
+- `site_abserror_mean` - average sitewide RBA absolute error across all iterations (`site_abserror` in 'site_error.csv')
+- `site_abserror_lowerci` and `site_abserror_upperci` - lower and upper intervals of site absolute error, respectively, across all iterations
+- `site_abserror_max` - maximum of sitewide RBA absolute error values across all iterations
+- `site_error_mean`, `site_error_lowerci`, `site_error_upperci`, `site_error_max` - corresponding non-absolute values of the above statistics
