@@ -1,7 +1,7 @@
 devtools::load_all()
 
 ui <- bslib::page_sidebar(
-  title = "Sitewide RBA 7.30.2025",
+  title = "Sitewide RBA 08.29.2025",
   sidebar =   bslib::sidebar(
     width = 300, open = NA,
     shinyjs::useShinyjs(),
@@ -10,7 +10,8 @@ ui <- bslib::page_sidebar(
       bslib::accordion_panel(
         "Sampling plan",
         shinyjs::useShinyjs(),
-        shiny::numericInput("DU.n", "Number of decision units in the site", min = 1, value = 15),
+        shiny::numericInput("DU.n", "Number of DUs in site", min = 1, value = 50),
+        shiny::numericInput("sample.n", "Number of IVBA samples", min = 1, value = 15),
         shiny::numericInput("ivba.incr",
                             label = div(style = "font-weight: normal; font-style: italic",
                                         "*Increments per IVBA composite sample:"),
@@ -27,7 +28,7 @@ ui <- bslib::page_sidebar(
                            selected = "truncnorm"),
         shiny::numericInput("mn_rba_site", "True RBAsite mean", value = 60),
         shiny::radioButtons("coeV_rba_site", "Sitewide RBA coefficient of variance (CoV):",
-                            choices = c(0.5, 1, 3, "Custom"), inline=TRUE),
+                            choices = c(0.05, .1, .3, "Custom"), inline=TRUE),
         shiny::div(
           id = "input_coeV_rba_site_custom",
           shiny::numericInput("coeV_rba_site_custom",
@@ -37,7 +38,7 @@ ui <- bslib::page_sidebar(
       ),
       bslib::accordion_panel(
         "Advanced simulation parameters",
-        shiny::numericInput("error_ivb_cv", "IVBA model error coefficient of variance", 0.05, min = 0, max = 1, step = 0.01),
+        shiny::numericInput("error_ivb_cv", "IVBA measurement error coefficient of variance", 0.05, min = 0, max = 1, step = 0.01),
         shiny::numericInput("iter", "Number of simulation iterations", 5000, min = 10)
       )
     ),
@@ -58,6 +59,7 @@ server <- function(input, output, session) {
 
   shiny::observe({
     params$DU.n <- input$DU.n
+    params$sample.n <- input$sample.n
     params$mn_rba_site <- input$mn_rba_site
     params$simDist_rba_site <- input$simDist_rba_site
     params$ivba.incr <- input$ivba.incr
