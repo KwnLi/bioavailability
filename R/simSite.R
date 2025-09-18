@@ -114,7 +114,7 @@ simSite <- function(
       siteRBA_abserror_upperci = quantile(siteRBA_abserror,.975, na.rm = TRUE),
       siteRBA_abserror_max = max(siteRBA_abserror, na.rm = TRUE),
 
-      DU_abserror_siteRBA_mean = mean(DU_abserror_siteRBA_mean),
+      DU_abserror_siteRBA_mean_mean = mean(DU_abserror_siteRBA_mean),
       DU_abserror_siteRBA_lowerci = quantile(DU_abserror_siteRBA_mean,.025, na.rm = TRUE),
       DU_abserror_siteRBA_upperci = quantile(DU_abserror_siteRBA_mean,.975, na.rm = TRUE),
       DU_abserror_siteRBA_max = max(DU_abserror_siteRBA_mean, na.rm = TRUE)
