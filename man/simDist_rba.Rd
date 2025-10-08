@@ -9,7 +9,7 @@ simDist_rba(n.rbameas, tru_mu_rba, coeV_rba, dist_rba)
 \arguments{
 \item{n.rbameas}{Number of RBA measurements}
 
-\item{tru_mu_rba}{Mean "true" RBA value}
+\item{tru_mu_rba}{Mean "true" RBA value (\% value, must be 0-100)}
 
 \item{coeV_rba}{Coefficient of variation of RBA distribution}
 

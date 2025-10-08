@@ -44,7 +44,9 @@ ui <- bslib::page_sidebar(
     ),
     shiny::actionButton("Run", label = "Run Simulation")
   ),
-  download_interface("download")
+  download_interface("download"),
+  plotOutput("est_rba_site_plot"),
+  plotOutput("DU_abserror_siteRBA_plot")
 )
 
 server <- function(input, output, session) {
@@ -90,6 +92,13 @@ server <- function(input, output, session) {
                     stepdirname = "site",
                     default.downloadname = "sitewide_simdata",
                     unlist_step_output = FALSE)
+
+    output$est_rba_site_plot <- renderPlot({
+      hist.est_rba_site(result()$out3_site_error, input.params$mn_rba_site)
+    })
+    output$DU_abserror_siteRBA_plot <- renderPlot({
+      hist.DU_abserror_siteRBA(result()$out3_site_error)
+    })
   }) |>
     bindEvent(input$Run)
 

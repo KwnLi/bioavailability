@@ -5,36 +5,29 @@
 \title{Simulate site function}
 \usage{
 simSite(
+  DU.n,
+  sample.n,
   mn_rba_site,
   coeV_rba_site,
   simDist_rba_site,
-  coeV_rba_DU,
-  simDist_rba_DU,
-  DU.n,
-  ivba.n,
   ivba.incr,
   error_ivb = TRUE,
   ivba_model = FALSE,
   post_mean = FALSE,
   error_ivb_cv,
-  useMeanIVBA = TRUE,
   iter = 5000
 )
 }
 \arguments{
+\item{DU.n}{number of DUs}
+
+\item{sample.n}{number of samples measuring IVBA}
+
 \item{mn_rba_site}{mean "true" RBA for the whole site}
 
 \item{coeV_rba_site}{coefficient of varation of RBA for the whole site}
 
 \item{simDist_rba_site}{distribution of DU RBA value across the site}
-
-\item{coeV_rba_DU}{coefficient of variation of RBA within a DU}
-
-\item{simDist_rba_DU}{distribution type of DU sample values}
-
-\item{DU.n}{number of DUs}
-
-\item{ivba.n}{number of IVBA samples}
 
 \item{ivba.incr}{number of increments per IVBA sample}
 
@@ -45,11 +38,11 @@ simSite(
 \item{post_mean}{(TRUE/FALSE) calculate IVBA model error after
 summarizing across samples. Default is FALSE.}
 
-\item{error_ivb_cv}{IVBA model error coefficient of variance}
-
-\item{useMeanIVBA}{(TRUE/FALSE) use the mean IVBA in calculating error results?}
+\item{error_ivb_cv}{IVBA measurement error coefficient of variance}
 
 \item{iter}{Number of simulation iterations}
+
+\item{useMeanIVBA}{(TRUE/FALSE) use the mean IVBA in calculating error results?}
 }
 \value{
 simulation results

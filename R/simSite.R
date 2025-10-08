@@ -81,14 +81,12 @@ simSite <- function(
     as.data.frame()
 
   # Set up DU values for sites
-  DU.values <- data.frame(sim.num = rep(1:iter, each = DU.n), DU_rba = DU.sims) |>
+  DU.values <- data.frame(sim.num = rep(1:iter, each = DU.n), tru_DU_rba = DU.sims) |>
     dplyr::left_join(sample.values |> dplyr::select(sim.num, est_rba_site) |> dplyr::distinct(),
                      by = "sim.num") |>
     dplyr::mutate(
-      DU_error_siteRBA = DU.sims - est_rba_site,
-      DU_abserror_siteRBA = abs(DU.sims - est_rba_site),
-      DU_diff_trueRBA = DU.sims - mn_rba_site,
-      DU_absdiff_trueRBA = abs(DU.sims - mn_rba_site),
+      DU_error_siteRBA = est_rba_site - tru_DU_rba,
+      DU_abserror_siteRBA = abs(est_rba_site - tru_DU_rba)
     )
 
   site.DU.error <- DU.values |>
@@ -96,8 +94,6 @@ simSite <- function(
     dplyr::summarize(
       DU_error_siteRBA_mean = mean(DU_error_siteRBA, na.rm = TRUE),
       DU_abserror_siteRBA_mean = mean(DU_abserror_siteRBA, na.rm = TRUE),
-      DU_diff_trueRBA_mean = mean(DU_diff_trueRBA, na.rm = TRUE),
-      DU_absdiff_trueRBA_mean = mean(DU_absdiff_trueRBA, na.rm = TRUE),
       .groups = "drop"
     ) |>
     dplyr::mutate(

@@ -4,7 +4,7 @@
 \alias{custom_rlnorm}
 \title{Custom log-normal random number generator}
 \usage{
-custom_rlnorm(n, m, s)
+custom_rlnorm(n, m, s, truncate = FALSE, max = 100)
 }
 \arguments{
 \item{n}{number of returned observations}
@@ -12,6 +12,10 @@ custom_rlnorm(n, m, s)
 \item{m}{mean in lognormal scale}
 
 \item{s}{sd in lognormal scale}
+
+\item{truncate}{T/F truncate the upper end of distribution?}
+
+\item{max}{maximum allowable value, if truncating. Default = 100}
 }
 \value{
 Values drawn from a lognormal distribution with mean \code{m} and standard
