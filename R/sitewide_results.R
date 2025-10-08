@@ -3,7 +3,7 @@
 #' @param site_error site error table
 #' @param tru.mean true mean value set by user
 #'
-#' @returns
+#' @returns a plot
 #' @export
 #'
 hist.est_rba_site <- function(site_error, tru.mean){
@@ -20,6 +20,7 @@ hist.est_rba_site <- function(site_error, tru.mean){
              )
 }
 
+#' @export
 hist.DU_abserror_siteRBA <- function(site_error){
   obs.mean <- mean(site_error$DU_abserror_siteRBA_mean)
   obs.95 <- quantile(site_error$DU_abserror_siteRBA_mean, c(0.025, 0.975))

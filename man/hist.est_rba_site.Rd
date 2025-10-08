@@ -11,6 +11,9 @@
 
 \item{tru.mean}{true mean value set by user}
 }
+\value{
+a plot
+}
 \description{
 Plotting functions for sitewide app
 }
