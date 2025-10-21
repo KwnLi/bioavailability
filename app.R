@@ -1,7 +1,7 @@
 devtools::load_all()
 
 ui <- bslib::page_sidebar(
-  title = "Sitewide RBA 08.29.2025",
+  title = "Sitewide RBA 10.20.2025",
   sidebar =   bslib::sidebar(
     width = 300, open = NA,
     shinyjs::useShinyjs(),
@@ -44,9 +44,15 @@ ui <- bslib::page_sidebar(
     ),
     shiny::actionButton("Run", label = "Run Simulation")
   ),
-  download_interface("download"),
-  plotOutput("est_rba_site_plot"),
-  plotOutput("DU_abserror_siteRBA_plot")
+  bslib::card(
+    min_height = "1600px",
+    download_interface("download"),
+    plotOutput("est_rba_site_plot"),
+    plotOutput("DU_abserror_siteRBA_mean_plot"),
+    plotOutput("DU_abserror_siteRBA_plot"),
+    tableOutput('site_table'),
+    htmlOutput('result_text')
+  )
 )
 
 server <- function(input, output, session) {
@@ -96,8 +102,18 @@ server <- function(input, output, session) {
     output$est_rba_site_plot <- renderPlot({
       hist.est_rba_site(result()$out3_site_error, input.params$mn_rba_site)
     })
+    output$DU_abserror_siteRBA_mean_plot <- renderPlot({
+      hist.DU_abserror_siteRBA_mean(result()$out3_site_error)
+    })
     output$DU_abserror_siteRBA_plot <- renderPlot({
-      hist.DU_abserror_siteRBA(result()$out3_site_error)
+      hist.DU_abserror_siteRBA(result()$out2_DU_values)
+    })
+    output$site_table <- renderTable({
+      setNames(data.frame(colnames(result()$out4_sim_error), t(result()$out4_sim_error)), c("stat","value"))
+
+    })
+    output$result_text <- renderText({
+      result_text(result, params)
     })
   }) |>
     bindEvent(input$Run)
