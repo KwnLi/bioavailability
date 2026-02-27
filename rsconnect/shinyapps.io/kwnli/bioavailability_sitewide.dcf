@@ -5,7 +5,7 @@ account: kwnli
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 14964189
-bundleId: 11636738
+bundleId: 11636745
 url: https://kwnli.shinyapps.io/bioavailability_sitewide/
 version: 1
 asMultiple: FALSE
