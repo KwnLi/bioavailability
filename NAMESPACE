@@ -2,7 +2,7 @@
 
 S3method(hist,DU_abserror_siteRBA)
 S3method(hist,DU_abserror_siteRBA_mean)
-S3method(hist,est_rba_site)
+S3method(hist,meas_rba_site)
 export(apply_meas_error)
 export(custom_rlnorm)
 export(fx)

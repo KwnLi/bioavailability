@@ -47,7 +47,7 @@ ui <- bslib::page_sidebar(
   bslib::card(
     min_height = "1600px",
     download_interface("download"),
-    plotOutput("est_rba_site_plot"),
+    plotOutput("meas_rba_site_plot"),
     plotOutput("DU_abserror_siteRBA_mean_plot"),
     plotOutput("DU_abserror_siteRBA_plot"),
     tableOutput('site_table'),
@@ -99,11 +99,11 @@ server <- function(input, output, session) {
                     default.downloadname = "sitewide_simdata",
                     unlist_step_output = FALSE)
 
-    output$est_rba_site_plot <- renderPlot({
-      hist.est_rba_site(result()$out3_site_error, input.params$mn_rba_site)
+    output$meas_rba_site_plot <- renderPlot({
+      hist.meas_rba_site(result()$out3_site_error, input.params$mn_rba_site)
     })
     output$DU_abserror_siteRBA_mean_plot <- renderPlot({
-      hist.DU_abserror_siteRBA_mean(result()$out3_site_error)
+      hist.DU_abserror_siteRBA_mean(result()$out3_site_error, input.params$iter)
     })
     output$DU_abserror_siteRBA_plot <- renderPlot({
       hist.DU_abserror_siteRBA(result()$out2_DU_values)

@@ -63,7 +63,7 @@ simSite <- function(
 
   # take mean/95% UL of DU samples for each iteration
   sample.sim <- rba.sim.meas |> dplyr::group_by(sim.num, sample.num) |>
-    dplyr::mutate(est_rba_sample = if(ivba_model & post_mean){  # TRUE/FALSE if modeling ivba AFTER taking mean
+    dplyr::mutate(meas_rba_sample = if(ivba_model & post_mean){  # TRUE/FALSE if modeling ivba AFTER taking mean
       fx(meas.ivb, contaminant = AsPb) |>  # convert to rba
         fy_error(contaminant = AsPb) |>      # convert to ivba with model error
         fx(contaminant = AsPb)               # convert to rba again
@@ -74,7 +74,7 @@ simSite <- function(
   # Calculate sample values for sites
   sample.values <- sample.sim |>
     dplyr::group_by(sim.num) |>
-    dplyr::mutate(est_rba_site = mean(est_rba_sample)) |>
+    dplyr::mutate(meas_rba_site = mean(meas_rba_sample)) |>
     dplyr::ungroup() |>
     dplyr::mutate(sim.num = as.numeric(sim.num), sample.num = as.numeric(sample.num)) |>
     dplyr::arrange(sim.num, sample.num) |>
@@ -82,23 +82,23 @@ simSite <- function(
 
   # Set up DU values for sites
   DU.values <- data.frame(sim.num = rep(1:iter, each = DU.n), tru_DU_rba = DU.sims) |>
-    dplyr::left_join(sample.values |> dplyr::select(sim.num, est_rba_site) |> dplyr::distinct(),
+    dplyr::left_join(sample.values |> dplyr::select(sim.num, meas_rba_site) |> dplyr::distinct(),
                      by = "sim.num") |>
     dplyr::mutate(
-      DU_error_siteRBA = est_rba_site - tru_DU_rba,
-      DU_abserror_siteRBA = abs(est_rba_site - tru_DU_rba)
+      DU_error_siteRBA = meas_rba_site - tru_DU_rba,
+      DU_abserror_siteRBA = abs(meas_rba_site - tru_DU_rba)
     )
 
   site.DU.error <- DU.values |>
-    dplyr::group_by(sim.num, est_rba_site) |>
+    dplyr::group_by(sim.num, meas_rba_site) |>
     dplyr::summarize(
       DU_error_siteRBA_mean = mean(DU_error_siteRBA, na.rm = TRUE),
       DU_abserror_siteRBA_mean = mean(DU_abserror_siteRBA, na.rm = TRUE),
       .groups = "drop"
     ) |>
     dplyr::mutate(
-      siteRBA_error = est_rba_site-mn_rba_site,
-      siteRBA_abserror = abs(est_rba_site-mn_rba_site),
+      siteRBA_error = meas_rba_site-mn_rba_site,
+      siteRBA_abserror = abs(meas_rba_site-mn_rba_site),
       sim.num = as.numeric(sim.num)
       ) |>
     as.data.frame()
